@@ -17,12 +17,13 @@ package v1alpha1_test
 import (
 	"encoding/json"
 
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
-	. "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
-	"github.com/gardener/gardener/pkg/utils/test/matchers"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	. "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
+	"github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"

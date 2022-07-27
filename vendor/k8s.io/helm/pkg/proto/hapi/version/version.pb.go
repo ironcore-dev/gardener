@@ -3,9 +3,13 @@
 
 package version
 
-import proto "github.com/golang/protobuf/proto"
-import fmt "fmt"
-import math "math"
+import (
+	fmt "fmt"
+
+	proto "github.com/golang/protobuf/proto"
+
+	math "math"
+)
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
@@ -77,7 +81,9 @@ func init() {
 	proto.RegisterType((*Version)(nil), "hapi.version.Version")
 }
 
-func init() { proto.RegisterFile("hapi/version/version.proto", fileDescriptor_version_10859f2d56ed17fa) }
+func init() {
+	proto.RegisterFile("hapi/version/version.proto", fileDescriptor_version_10859f2d56ed17fa)
+}
 
 var fileDescriptor_version_10859f2d56ed17fa = []byte{
 	// 151 bytes of a gzipped FileDescriptorProto

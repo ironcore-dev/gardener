@@ -15,10 +15,6 @@
 package helper_test
 
 import (
-	apisconfig "github.com/gardener/gardener/pkg/admissioncontroller/apis/config"
-	. "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/helper"
-	apisconfigv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
-	configv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
@@ -26,6 +22,11 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/authentication/serviceaccount"
+
+	apisconfig "github.com/gardener/gardener/pkg/admissioncontroller/apis/config"
+	. "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/helper"
+	apisconfigv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
+	configv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 )
 
 var _ = Describe("Helpers test", func() {

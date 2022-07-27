@@ -8,14 +8,15 @@ import (
 	context "context"
 	reflect "reflect"
 
-	v1alpha1 "github.com/gardener/gardener/pkg/apis/authentication/v1alpha1"
-	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta10 "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1beta1"
 	gomock "github.com/golang/mock/gomock"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	rest "k8s.io/client-go/rest"
+
+	v1alpha1 "github.com/gardener/gardener/pkg/apis/authentication/v1alpha1"
+	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta10 "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1beta1"
 )
 
 // MockCoreV1beta1Interface is a mock of CoreV1beta1Interface interface.

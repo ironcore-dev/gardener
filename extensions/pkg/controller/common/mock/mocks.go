@@ -8,9 +8,10 @@ import (
 	context "context"
 	reflect "reflect"
 
-	common "github.com/gardener/gardener/extensions/pkg/controller/common"
 	gomock "github.com/golang/mock/gomock"
 	client "sigs.k8s.io/controller-runtime/pkg/client"
+
+	common "github.com/gardener/gardener/extensions/pkg/controller/common"
 )
 
 // MockResolver is a mock of Resolver interface.

@@ -8,14 +8,15 @@ import (
 	context "context"
 	reflect "reflect"
 
-	chartrenderer "github.com/gardener/gardener/pkg/chartrenderer"
-	kubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
 	gomock "github.com/golang/mock/gomock"
 	version "k8s.io/apimachinery/pkg/version"
 	kubernetes0 "k8s.io/client-go/kubernetes"
 	rest "k8s.io/client-go/rest"
 	cache "sigs.k8s.io/controller-runtime/pkg/cache"
 	client "sigs.k8s.io/controller-runtime/pkg/client"
+
+	chartrenderer "github.com/gardener/gardener/pkg/chartrenderer"
+	kubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
 )
 
 // MockInterface is a mock of Interface interface.

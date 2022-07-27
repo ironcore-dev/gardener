@@ -8,14 +8,15 @@ import (
 	context "context"
 	reflect "reflect"
 
-	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	managedseedset "github.com/gardener/gardener/pkg/controllermanager/controller/managedseedset"
-	shoot "github.com/gardener/gardener/pkg/operation/shoot"
 	logr "github.com/go-logr/logr"
 	gomock "github.com/golang/mock/gomock"
 	types "k8s.io/apimachinery/pkg/types"
 	client "sigs.k8s.io/controller-runtime/pkg/client"
+
+	v1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
+	managedseedset "github.com/gardener/gardener/pkg/controllermanager/controller/managedseedset"
+	shoot "github.com/gardener/gardener/pkg/operation/shoot"
 )
 
 // MockActuator is a mock of Actuator interface.

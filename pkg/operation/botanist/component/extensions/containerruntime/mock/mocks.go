@@ -8,8 +8,9 @@ import (
 	context "context"
 	reflect "reflect"
 
-	v1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gomock "github.com/golang/mock/gomock"
+
+	v1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 )
 
 // MockInterface is a mock of Interface interface.

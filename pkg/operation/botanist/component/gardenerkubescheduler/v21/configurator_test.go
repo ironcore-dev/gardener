@@ -17,9 +17,10 @@ package v21_test
 import (
 	"testing"
 
+	"k8s.io/utils/pointer"
+
 	v21 "github.com/gardener/gardener/pkg/operation/botanist/component/gardenerkubescheduler/v21"
 	"github.com/gardener/gardener/third_party/kube-scheduler/v21/v1beta1"
-	"k8s.io/utils/pointer"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"

@@ -8,8 +8,9 @@ import (
 	context "context"
 	reflect "reflect"
 
-	kubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
 	gomock "github.com/golang/mock/gomock"
+
+	kubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
 )
 
 // MockApplier is a mock of Applier interface.

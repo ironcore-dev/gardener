@@ -8,9 +8,10 @@ import (
 	context "context"
 	reflect "reflect"
 
+	gomock "github.com/golang/mock/gomock"
+
 	kubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
 	clientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	gomock "github.com/golang/mock/gomock"
 )
 
 // MockClientMap is a mock of ClientMap interface.

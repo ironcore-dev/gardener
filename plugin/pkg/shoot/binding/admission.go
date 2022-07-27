@@ -20,9 +20,16 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/gardener/gardener/pkg/features"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
+
+	"github.com/gardener/gardener/pkg/features"
+
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/apiserver/pkg/admission"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/helper"
@@ -32,11 +39,6 @@ import (
 	corelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
 	corev1alpha1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/apiserver/pkg/admission"
 )
 
 const (

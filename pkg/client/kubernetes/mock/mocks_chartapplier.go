@@ -9,9 +9,10 @@ import (
 	embed "embed"
 	reflect "reflect"
 
+	gomock "github.com/golang/mock/gomock"
+
 	chartrenderer "github.com/gardener/gardener/pkg/chartrenderer"
 	kubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
-	gomock "github.com/golang/mock/gomock"
 )
 
 // MockChartApplier is a mock of ChartApplier interface.

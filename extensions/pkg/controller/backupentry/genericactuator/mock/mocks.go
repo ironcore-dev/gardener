@@ -8,9 +8,10 @@ import (
 	context "context"
 	reflect "reflect"
 
-	v1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	logr "github.com/go-logr/logr"
 	gomock "github.com/golang/mock/gomock"
+
+	v1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 )
 
 // MockBackupEntryDelegate is a mock of BackupEntryDelegate interface.

@@ -25,12 +25,13 @@
 package v1alpha1
 
 import (
+	reflect "reflect"
+	sync "sync"
+
 	timestamp "github.com/golang/protobuf/ptypes/timestamp"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	v1alpha1 "istio.io/api/analysis/v1alpha1"
-	reflect "reflect"
-	sync "sync"
 )
 
 const (

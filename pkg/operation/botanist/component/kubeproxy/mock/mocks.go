@@ -8,8 +8,9 @@ import (
 	context "context"
 	reflect "reflect"
 
-	kubeproxy "github.com/gardener/gardener/pkg/operation/botanist/component/kubeproxy"
 	gomock "github.com/golang/mock/gomock"
+
+	kubeproxy "github.com/gardener/gardener/pkg/operation/botanist/component/kubeproxy"
 )
 
 // MockInterface is a mock of Interface interface.

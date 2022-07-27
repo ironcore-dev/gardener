@@ -3,9 +3,13 @@
 
 package chart
 
-import proto "github.com/golang/protobuf/proto"
-import fmt "fmt"
-import math "math"
+import (
+	fmt "fmt"
+
+	proto "github.com/golang/protobuf/proto"
+
+	math "math"
+)
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
@@ -294,7 +298,9 @@ func init() {
 	proto.RegisterEnum("hapi.chart.Metadata_Engine", Metadata_Engine_name, Metadata_Engine_value)
 }
 
-func init() { proto.RegisterFile("hapi/chart/metadata.proto", fileDescriptor_metadata_bafee76586953fd5) }
+func init() {
+	proto.RegisterFile("hapi/chart/metadata.proto", fileDescriptor_metadata_bafee76586953fd5)
+}
 
 var fileDescriptor_metadata_bafee76586953fd5 = []byte{
 	// 435 bytes of a gzipped FileDescriptorProto

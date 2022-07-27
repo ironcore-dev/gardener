@@ -11,12 +11,13 @@ import (
 	semver "github.com/Masterminds/semver"
 	unit "github.com/coreos/go-systemd/v22/unit"
 	v1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
-	context0 "github.com/gardener/gardener/extensions/pkg/webhook/context"
-	v1alpha10 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	gomock "github.com/golang/mock/gomock"
 	v1 "k8s.io/api/apps/v1"
 	v10 "k8s.io/api/core/v1"
 	v1beta1 "k8s.io/kubelet/config/v1beta1"
+
+	context0 "github.com/gardener/gardener/extensions/pkg/webhook/context"
+	v1alpha10 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 )
 
 // MockEnsurer is a mock of Ensurer interface.

@@ -7,9 +7,10 @@ package kubelet
 import (
 	reflect "reflect"
 
-	v1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	gomock "github.com/golang/mock/gomock"
 	v1beta1 "k8s.io/kubelet/config/v1beta1"
+
+	v1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 )
 
 // MockConfigCodec is a mock of ConfigCodec interface.

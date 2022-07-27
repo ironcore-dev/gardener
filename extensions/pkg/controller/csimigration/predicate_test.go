@@ -17,10 +17,11 @@ package csimigration_test
 import (
 	. "github.com/gardener/gardener/extensions/pkg/controller/csimigration"
 
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 )
 
 var _ = Describe("predicate", func() {

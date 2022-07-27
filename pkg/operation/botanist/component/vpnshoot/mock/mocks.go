@@ -8,8 +8,9 @@ import (
 	context "context"
 	reflect "reflect"
 
-	vpnshoot "github.com/gardener/gardener/pkg/operation/botanist/component/vpnshoot"
 	gomock "github.com/golang/mock/gomock"
+
+	vpnshoot "github.com/gardener/gardener/pkg/operation/botanist/component/vpnshoot"
 )
 
 // MockInterface is a mock of Interface interface.

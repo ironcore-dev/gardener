@@ -18,13 +18,14 @@ import (
 	"bytes"
 	"fmt"
 
-	admissioncontrollerconfig "github.com/gardener/gardener/pkg/admissioncontroller/apis/config"
-	admissioncontrollerconfigv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/runtime/serializer/versioning"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+
+	admissioncontrollerconfig "github.com/gardener/gardener/pkg/admissioncontroller/apis/config"
+	admissioncontrollerconfigv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
 )
 
 var scheme *runtime.Scheme

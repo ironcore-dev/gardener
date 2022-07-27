@@ -17,6 +17,7 @@ package botanist
 import (
 	"context"
 	"fmt"
+
 	"path/filepath"
 
 	"github.com/gardener/gardener/charts"
@@ -30,6 +31,7 @@ import (
 	extensionsdnsrecord "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dnsrecord"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/images"
+
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 

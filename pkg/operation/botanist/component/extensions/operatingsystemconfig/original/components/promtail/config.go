@@ -28,8 +28,9 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/logging"
 
 	"github.com/Masterminds/sprig"
-	"github.com/gardener/gardener/pkg/utils"
 	"k8s.io/utils/pointer"
+
+	"github.com/gardener/gardener/pkg/utils"
 )
 
 var (

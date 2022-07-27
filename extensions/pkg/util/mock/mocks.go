@@ -7,11 +7,12 @@ package mock
 import (
 	reflect "reflect"
 
-	kubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
 	gomock "github.com/golang/mock/gomock"
 	version "k8s.io/apimachinery/pkg/version"
 	kubernetes0 "k8s.io/client-go/kubernetes"
 	client "sigs.k8s.io/controller-runtime/pkg/client"
+
+	kubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
 )
 
 // MockShootClients is a mock of ShootClients interface.

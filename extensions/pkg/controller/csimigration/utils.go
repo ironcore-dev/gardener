@@ -17,8 +17,9 @@ package csimigration
 import (
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 
-	"github.com/gardener/gardener/pkg/utils/version"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/gardener/gardener/pkg/utils/version"
 )
 
 // CheckCSIConditions takes the `Cluster` object and the Kubernetes version that shall be used for CSI migration. It

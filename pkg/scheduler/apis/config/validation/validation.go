@@ -17,9 +17,10 @@ package validation
 import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
+	"k8s.io/apimachinery/pkg/util/sets"
+
 	"github.com/gardener/gardener/pkg/logger"
 	schedulerapi "github.com/gardener/gardener/pkg/scheduler/apis/config"
-	"k8s.io/apimachinery/pkg/util/sets"
 )
 
 // ValidateConfiguration validates the configuration.

@@ -16,6 +16,7 @@ package controlplane
 
 import (
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
+
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	"github.com/gardener/gardener/extensions/pkg/webhook/controlplane"
 	"github.com/gardener/gardener/extensions/pkg/webhook/controlplane/genericmutator"

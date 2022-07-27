@@ -8,9 +8,10 @@ import (
 	embed "embed"
 	reflect "reflect"
 
-	chartrenderer "github.com/gardener/gardener/pkg/chartrenderer"
 	gomock "github.com/golang/mock/gomock"
 	rest "k8s.io/client-go/rest"
+
+	chartrenderer "github.com/gardener/gardener/pkg/chartrenderer"
 )
 
 // MockInterface is a mock of Interface interface.

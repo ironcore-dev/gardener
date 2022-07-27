@@ -19,7 +19,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/gardener/gardener/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -32,6 +31,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+
+	"github.com/gardener/gardener/pkg/utils"
 
 	gardenercoreinstall "github.com/gardener/gardener/pkg/apis/core/install"
 	seedmanagementinstall "github.com/gardener/gardener/pkg/apis/seedmanagement/install"

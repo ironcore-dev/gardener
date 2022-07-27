@@ -18,9 +18,10 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/golang/mock/gomock"
+
 	. "github.com/gardener/gardener/pkg/client/kubernetes"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	"github.com/golang/mock/gomock"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"

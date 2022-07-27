@@ -17,10 +17,11 @@ package common_test
 import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 
-	. "github.com/gardener/gardener/pkg/scheduler/controller/common"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
+
+	. "github.com/gardener/gardener/pkg/scheduler/controller/common"
 )
 
 var _ = Describe("#VerifySeedReadiness", func() {

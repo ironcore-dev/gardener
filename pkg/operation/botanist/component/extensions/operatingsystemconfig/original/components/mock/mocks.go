@@ -7,9 +7,10 @@ package mock
 import (
 	reflect "reflect"
 
+	gomock "github.com/golang/mock/gomock"
+
 	v1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	components "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components"
-	gomock "github.com/golang/mock/gomock"
 )
 
 // MockComponent is a mock of Component interface.

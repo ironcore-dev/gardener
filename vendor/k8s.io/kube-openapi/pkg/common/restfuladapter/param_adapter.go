@@ -2,6 +2,7 @@ package restfuladapter
 
 import (
 	"encoding/json"
+
 	"github.com/emicklei/go-restful"
 	"k8s.io/kube-openapi/pkg/common"
 )

@@ -3,10 +3,15 @@
 
 package release
 
-import proto "github.com/golang/protobuf/proto"
-import fmt "fmt"
-import math "math"
-import chart "k8s.io/helm/pkg/proto/hapi/chart"
+import (
+	fmt "fmt"
+
+	proto "github.com/golang/protobuf/proto"
+
+	math "math"
+
+	chart "k8s.io/helm/pkg/proto/hapi/chart"
+)
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
@@ -128,7 +133,9 @@ func init() {
 	proto.RegisterType((*Release)(nil), "hapi.release.Release")
 }
 
-func init() { proto.RegisterFile("hapi/release/release.proto", fileDescriptor_release_fa600adfb1fffc82) }
+func init() {
+	proto.RegisterFile("hapi/release/release.proto", fileDescriptor_release_fa600adfb1fffc82)
+}
 
 var fileDescriptor_release_fa600adfb1fffc82 = []byte{
 	// 256 bytes of a gzipped FileDescriptorProto

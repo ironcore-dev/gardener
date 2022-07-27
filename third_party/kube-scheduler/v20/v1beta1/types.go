@@ -20,11 +20,12 @@ import (
 	"bytes"
 	"fmt"
 
-	v1 "github.com/gardener/gardener/third_party/kube-scheduler/v20/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"sigs.k8s.io/yaml"
+
+	v1 "github.com/gardener/gardener/third_party/kube-scheduler/v20/v1"
 )
 
 const (

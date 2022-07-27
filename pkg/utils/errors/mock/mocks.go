@@ -7,8 +7,9 @@ package mock
 import (
 	reflect "reflect"
 
-	errors "github.com/gardener/gardener/pkg/utils/errors"
 	gomock "github.com/golang/mock/gomock"
+
+	errors "github.com/gardener/gardener/pkg/utils/errors"
 )
 
 // MockTaskFunc is a mock of TaskFunc interface.

@@ -15,10 +15,11 @@
 package validation_test
 
 import (
-	"github.com/gardener/gardener/pkg/apis/settings"
-	settings_validation "github.com/gardener/gardener/pkg/apis/settings/validation"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+
+	"github.com/gardener/gardener/pkg/apis/settings"
+	settings_validation "github.com/gardener/gardener/pkg/apis/settings/validation"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"

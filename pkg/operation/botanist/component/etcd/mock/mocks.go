@@ -9,9 +9,10 @@ import (
 	reflect "reflect"
 
 	v1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
+	gomock "github.com/golang/mock/gomock"
+
 	kubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
 	etcd "github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
-	gomock "github.com/golang/mock/gomock"
 )
 
 // MockInterface is a mock of Interface interface.

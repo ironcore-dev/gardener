@@ -8,9 +8,10 @@ import (
 	context "context"
 	reflect "reflect"
 
-	graph "github.com/gardener/gardener/pkg/admissioncontroller/webhooks/auth/seed/graph"
 	gomock "github.com/golang/mock/gomock"
 	cache "sigs.k8s.io/controller-runtime/pkg/cache"
+
+	graph "github.com/gardener/gardener/pkg/admissioncontroller/webhooks/auth/seed/graph"
 )
 
 // MockInterface is a mock of Interface interface.

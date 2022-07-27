@@ -8,9 +8,10 @@ import (
 	context "context"
 	reflect "reflect"
 
-	context0 "github.com/gardener/gardener/extensions/pkg/webhook/context"
 	gomock "github.com/golang/mock/gomock"
 	v1 "k8s.io/api/core/v1"
+
+	context0 "github.com/gardener/gardener/extensions/pkg/webhook/context"
 )
 
 // MockEnsurer is a mock of Ensurer interface.

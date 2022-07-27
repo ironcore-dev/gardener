@@ -17,10 +17,11 @@ limitations under the License.
 package v1alpha2
 
 import (
-	v1 "github.com/gardener/gardener/third_party/kube-scheduler/v18/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
+
+	v1 "github.com/gardener/gardener/third_party/kube-scheduler/v18/v1"
 )
 
 const (

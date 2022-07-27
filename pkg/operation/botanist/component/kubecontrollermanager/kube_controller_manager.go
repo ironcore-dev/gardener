@@ -21,6 +21,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-logr/logr"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -34,7 +36,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
 	"github.com/gardener/gardener/pkg/utils/version"
-	"github.com/go-logr/logr"
 
 	"github.com/Masterminds/semver"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"

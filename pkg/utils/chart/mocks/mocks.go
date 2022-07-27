@@ -8,11 +8,12 @@ import (
 	context "context"
 	reflect "reflect"
 
+	gomock "github.com/golang/mock/gomock"
+	client "sigs.k8s.io/controller-runtime/pkg/client"
+
 	chartrenderer "github.com/gardener/gardener/pkg/chartrenderer"
 	kubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
 	imagevector "github.com/gardener/gardener/pkg/utils/imagevector"
-	gomock "github.com/golang/mock/gomock"
-	client "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // MockInterface is a mock of Interface interface.

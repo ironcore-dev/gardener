@@ -8,10 +8,11 @@ import (
 	context "context"
 	reflect "reflect"
 
-	config "github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	vpnseedserver "github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	gomock "github.com/golang/mock/gomock"
 	types "k8s.io/apimachinery/pkg/types"
+
+	config "github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	vpnseedserver "github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 )
 
 // MockInterface is a mock of Interface interface.

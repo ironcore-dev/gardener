@@ -9,7 +9,6 @@ import (
 	reflect "reflect"
 	time "time"
 
-	terraformer "github.com/gardener/gardener/extensions/pkg/terraformer"
 	logr "github.com/go-logr/logr"
 	gomock "github.com/golang/mock/gomock"
 	v1 "k8s.io/api/core/v1"
@@ -17,6 +16,8 @@ import (
 	v11 "k8s.io/client-go/kubernetes/typed/core/v1"
 	rest "k8s.io/client-go/rest"
 	client "sigs.k8s.io/controller-runtime/pkg/client"
+
+	terraformer "github.com/gardener/gardener/extensions/pkg/terraformer"
 )
 
 // MockTerraformer is a mock of Terraformer interface.

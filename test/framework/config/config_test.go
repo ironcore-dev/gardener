@@ -18,9 +18,10 @@ import (
 	"flag"
 	"os"
 
-	"github.com/gardener/gardener/test/framework/config"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	"github.com/gardener/gardener/test/framework/config"
 
 	"testing"
 )

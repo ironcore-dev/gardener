@@ -15,8 +15,9 @@
 package managedresources_test
 
 import (
-	. "github.com/gardener/gardener/pkg/utils/managedresources"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	. "github.com/gardener/gardener/pkg/utils/managedresources"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"

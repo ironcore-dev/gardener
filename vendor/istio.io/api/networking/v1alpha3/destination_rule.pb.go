@@ -215,14 +215,15 @@
 package v1alpha3
 
 import (
+	reflect "reflect"
+	sync "sync"
+
 	duration "github.com/golang/protobuf/ptypes/duration"
 	wrappers "github.com/golang/protobuf/ptypes/wrappers"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	v1beta1 "istio.io/api/type/v1beta1"
-	reflect "reflect"
-	sync "sync"
 )
 
 const (

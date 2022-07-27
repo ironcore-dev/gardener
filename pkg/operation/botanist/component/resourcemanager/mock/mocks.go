@@ -8,8 +8,9 @@ import (
 	context "context"
 	reflect "reflect"
 
-	resourcemanager "github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	gomock "github.com/golang/mock/gomock"
+
+	resourcemanager "github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 )
 
 // MockInterface is a mock of Interface interface.
