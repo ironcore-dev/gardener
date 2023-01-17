@@ -609,6 +609,11 @@ func (o *Operation) ComputeIngressHost(prefix string) string {
 	return fmt.Sprintf("%s-%s.%s", prefix, shortID, o.Seed.IngressDomain())
 }
 
+// ComputeIstioHost computes the host for a given prefix.
+func (o *Operation) ComputeIstioHost(prefix string) string {
+	return fmt.Sprintf("prometheus.%s", *o.Shoot.ExternalClusterDomain)
+}
+
 // ToAdvertisedAddresses returns list of advertised addresses on a Shoot cluster.
 func (o *Operation) ToAdvertisedAddresses() []gardencorev1beta1.ShootAdvertisedAddress {
 	var addresses []gardencorev1beta1.ShootAdvertisedAddress

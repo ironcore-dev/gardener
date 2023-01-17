@@ -133,6 +133,7 @@ func defaultIstio(
 			defaultIngressGatewayConfig.Ports,
 			corev1.ServicePort{Name: "proxy", Port: 8443, TargetPort: intstr.FromInt(8443)},
 			corev1.ServicePort{Name: "tcp", Port: 443, TargetPort: intstr.FromInt(9443)},
+			corev1.ServicePort{Name: "prometheus", Port: 8421, TargetPort: intstr.FromInt(8421)},
 			corev1.ServicePort{Name: "tls-tunnel", Port: vpnseedserver.GatewayPort, TargetPort: intstr.FromInt(vpnseedserver.GatewayPort)},
 		)
 	}

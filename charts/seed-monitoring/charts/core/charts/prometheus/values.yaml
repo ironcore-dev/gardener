@@ -19,6 +19,11 @@ ingress:
   # admin : admin base64 encoded
   authSecretName: auth-secret-name
 
+istio:
+  hosts:
+  - hostName: prometheus.externalclusterdomain.com
+  credentialName: prometheus-tls
+
 kubernetesVersion: 1.20.1
 secretNameClusterCA: ca
 secretNameEtcdCA: ca-etcd

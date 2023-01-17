@@ -219,6 +219,14 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 					},
 				},
 			},
+			"istio": map[string]interface{}{
+				"hosts": []map[string]interface{}{
+					{
+						"hostName": b.ComputeIstioHost(common.PrometheusPrefix),
+					},
+				},
+				"credentialName": prometheusIngressTLSSecretName,
+			},
 			"namespace": map[string]interface{}{
 				"uid": b.SeedNamespaceObject.UID,
 			},

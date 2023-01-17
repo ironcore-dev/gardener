@@ -1,0 +1,40 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-to-prometheus
+  namespace: istio-ingress
+spec:
+  podSelector:
+    matchLabels:
+      app: istio-ingressgateway
+  egress:
+  - to:
+    - namespaceSelector: {}
+      podSelector:
+        matchLabels:
+          app: prometheus
+          role: monitoring
+  policyTypes:
+  - Egress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-to-prometheus
+  namespace: {{ .Release.Namespace }} 
+spec:
+  podSelector:
+    matchLabels:
+      app: prometheus
+      role: monitoring
+  ingress:
+  - from:
+    - namespaceSelector: {}
+      podSelector:
+        matchLabels:
+          app: istio-ingressgateway
+  - from:
+    - ipBlock:
+        cidr: 0.0.0.0/0
+  policyTypes:
+  - Ingress

@@ -1,0 +1,51 @@
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: prometheus
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  - port:
+      name: prometheus
+      number: 8421
+      protocol: HTTPS
+    hosts:
+    {{- range .Values.istio.hosts }}
+    - {{ required ".hostName is required" .hostName }}
+    {{- end }}
+    tls:
+      mode: SIMPLE
+      credentialName: {{ required ".credentialName is required" .Values.istio.credentialName }}
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: prometheus
+  namespace: {{ .Release.Namespace }}
+spec:
+  exportTo:
+  - '*'
+  gateways:
+  - prometheus
+  hosts:
+  {{- range .Values.istio.hosts }}
+  - {{ required ".hostName is required" .hostName }}
+  {{- end }}  
+  http:
+  - route:
+    - destination:
+        host: prometheus-web
+        port:
+          number: 80
+---
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: prometheus-web
+  namespace: {{ .Release.Namespace }}
+spec:
+  exportTo:
+  - '*'
+  host: prometheus-web.{{ .Release.Namespace }}.svc.cluster.local
