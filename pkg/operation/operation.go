@@ -595,7 +595,7 @@ func (o *Operation) ComputeAlertManagerHost() string {
 
 // ComputePrometheusHost computes the host for prometheus.
 func (o *Operation) ComputePrometheusHost() string {
-	return o.ComputeIngressHost(common.PrometheusPrefix)
+	return o.ComputeIstioHost(common.PrometheusPrefix)
 }
 
 // ComputeLokiHost computes the host for loki.
