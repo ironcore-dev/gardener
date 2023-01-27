@@ -32,7 +32,7 @@ spec:
   hosts:
   {{- range .Values.istio.hosts }}
   - {{ required ".hostName is required" .hostName }}
-  {{- end }}  
+  {{- end }}
   http:
   - route:
     - destination:
