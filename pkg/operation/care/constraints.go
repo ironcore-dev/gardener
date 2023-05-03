@@ -28,6 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/utils/clock"
+	"k8s.io/utils/strings/slices"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -355,8 +356,27 @@ func IsProblematicWebhook(
 	}
 
 	for _, rule := range rules {
+		// webhooks catching DELETE operation for pods in any namespace is problematic
+		if ruleContainsDeleteOpForPods(rule) {
+			return true
+		}
+
 		for _, matcher := range matchers.WebhookConstraintMatchers {
 			if matcher.Match(rule, objSelector, nsSelector) {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+func ruleContainsDeleteOpForPods(rule admissionregistrationv1.RuleWithOperations) bool {
+	if slices.Contains(rule.APIGroups, "") &&
+		slices.Contains(rule.APIVersions, "v1") &&
+		slices.Contains(rule.Resources, "pods") {
+		for _, op := range rule.Operations {
+			if op == admissionregistrationv1.Delete {
 				return true
 			}
 		}

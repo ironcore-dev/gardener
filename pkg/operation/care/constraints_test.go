@@ -153,6 +153,12 @@ var _ = Describe("Constraints", func() {
 			}
 
 			commonTests = func(gvr schema.GroupVersionResource, problematic, notProblematic []TableEntry) {
+				if gvr.Resource != "pods" {
+					notProblematic = append(notProblematic,
+						Entry("operationType 'DELETE'", webhookTestCase{operationType: &operationDelete}),
+					)
+				}
+
 				DescribeTable(fmt.Sprintf("problematic webhook for %s", gvr.String()),
 					func(testCase webhookTestCase) {
 						testCase.gvr = gvr
@@ -185,13 +191,12 @@ var _ = Describe("Constraints", func() {
 						Expect(IsProblematicWebhook(testCase.build())).To(BeFalse(), "expected webhook not to be problematic")
 					},
 					Entry("failurePolicy 'Ignore' and timeoutSeconds ok", webhookTestCase{failurePolicy: &failurePolicyIgnore, timeoutSeconds: &timeoutSecondsNotProblematic}),
-					Entry("operationType 'DELETE'", webhookTestCase{operationType: &operationDelete}),
 					notProblematic,
 				)
 			}
 
 			podsTestTables = func(gvr schema.GroupVersionResource) {
-				commonTests(gvr, append(kubeSystemNamespaceProblematic,
+				problematic := append(kubeSystemNamespaceProblematic,
 					Entry("objectSelector matching no-cleanup", webhookTestCase{
 						objectSelector: &metav1.LabelSelector{
 							MatchLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"}},
@@ -218,8 +223,31 @@ var _ = Describe("Constraints", func() {
 								"shoot.gardener.cloud/no-cleanup": "true",
 								"gardener.cloud/purpose":          "kube-system",
 							}},
-					}),
-				), append(kubeSystemNamespaceNotProblematic,
+					}))
+
+				if gvr.Resource == "pods" {
+					problematic = append(problematic,
+						Entry("operationType 'DELETE', even if namespaceSelector excluding name label", webhookTestCase{
+							operationType: &operationDelete,
+							namespaceSelector: &metav1.LabelSelector{
+								MatchExpressions: []metav1.LabelSelectorRequirement{
+									{
+										Key:      "kubernetes.io/metadata.name",
+										Operator: metav1.LabelSelectorOpNotIn,
+										Values:   []string{"kube-system"},
+									},
+								},
+							},
+						}),
+						Entry("operationType 'DELETE', even if not matching namespaceSelector", webhookTestCase{
+							operationType: &operationDelete,
+							namespaceSelector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{"foo": "bar"}},
+						}),
+					)
+				}
+
+				notProblematic := append(kubeSystemNamespaceNotProblematic,
 					Entry("matching objectSelector, not matching namespaceSelector", webhookTestCase{
 						objectSelector: &metav1.LabelSelector{
 							MatchLabels: map[string]string{
@@ -242,7 +270,11 @@ var _ = Describe("Constraints", func() {
 								"gardener.cloud/purpose":          "kube-system",
 							}},
 					}),
-				))
+				)
+
+				commonTests(gvr,
+					problematic,
+					notProblematic)
 			}
 
 			namespacesTestTables = func(gvr schema.GroupVersionResource) {
