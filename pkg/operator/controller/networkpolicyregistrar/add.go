@@ -15,6 +15,8 @@
 package networkpolicyregistrar
 
 import (
+	"fmt"
+
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -45,11 +47,23 @@ func (r *Reconciler) AddToManager(mgr manager.Manager) error {
 
 func NetworkingPredicate() predicate.Predicate {
 	return predicate.NewPredicateFuncs(func(obj client.Object) bool {
+		var val bool
 		garden, ok := obj.(*operatorv1alpha1.Garden)
 		if !ok {
 			return false
 		}
 
-		return garden.Spec.RuntimeCluster.Networking.Pods != "" && garden.Spec.RuntimeCluster.Networking.Services != ""
+		fmt.Printf("Garden: %v", garden)
+		fmt.Printf("Networking: %v", garden.Spec.RuntimeCluster.Networking)
+		fmt.Printf("Pods: %v", garden.Spec.RuntimeCluster.Networking.Pods)
+
+		val = garden.Spec.RuntimeCluster.Networking.Pods != "" && garden.Spec.RuntimeCluster.Networking.Services != ""
+
+		if val {
+			fmt.Println("ReturnTrue")
+		} else {
+			fmt.Println("ReturnFalse")
+		}
+		return val
 	})
 }

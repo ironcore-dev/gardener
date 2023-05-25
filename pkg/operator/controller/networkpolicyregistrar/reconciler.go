@@ -53,6 +53,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("error retrieving object from store: %w", err)
 	}
 
+	fmt.Printf("Garden: %v", garden)
+
 	if err := (&networkpolicy.Reconciler{
 		ConcurrentSyncs:              r.Config.ConcurrentSyncs,
 		AdditionalNamespaceSelectors: r.Config.AdditionalNamespaceSelectors,
