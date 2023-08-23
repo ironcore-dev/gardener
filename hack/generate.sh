@@ -17,7 +17,7 @@
 set -e
 
 WHAT="protobuf codegen manifests logcheck gomegacheck monitoring-docs"
-WHICH="charts cmd example extensions pkg plugin test"
+WHICH=""
 MODE="parallel"
 
 parse_flags() {
@@ -47,12 +47,14 @@ parse_flags() {
 }
 
 overwrite_paths() {
-  local which=$WHICH
-  IFS=' ' read -ra entries <<< "$which"
-  for entry in "${entries[@]}"; do
-    which=${which//$entry/./$entry/...}
+  local options=("$@")
+  local updated_paths=()
+
+  for option in "${options[@]}"; do
+    updated_paths+=("./$option/...")
   done
-  echo "$which"
+
+  echo "${updated_paths[*]}"
 }
 
 run_target() {
@@ -65,12 +67,46 @@ run_target() {
       $REPO_ROOT/hack/update-codegen.sh --"$MODE"
       ;;
     manifests)
-      if [[ "$MODE" == "sequential" ]]; then
-        # In sequential mode, paths need to be converted to go package notation (e.g., ./charts/...)
-        which=$(overwrite_paths)
-        $REPO_ROOT/hack/generate-sequential.sh $which
-      else
-        $REPO_ROOT/hack/generate-parallel.sh $WHICH
+      IFS=' ' read -ra available_options <<< "charts cmd example extensions pkg plugin test"
+      if [[ -z "$WHICH" ]]; then
+        WHICH=("${available_options[@]}")
+      fi
+
+      valid_options=()
+      invalid_options=()
+      
+      IFS=' ' read -ra WHICH_ARRAY <<< "$WHICH"
+      for option in "${WHICH_ARRAY[@]}"; do
+          valid=false
+      
+          for valid_option in "${available_options[@]}"; do
+              if [[ "$option" == "$valid_option" ]]; then
+                  valid=true
+                  break
+              fi
+          done
+      
+          if $valid; then
+              valid_options+=("$option")
+          else
+              invalid_options+=("$option")
+          fi
+      done
+      
+      if [[ ${#invalid_options[@]} -gt 0 ]]; then
+          printf "Skipping invalid options: %s, Available options are: %s\n\n" "${invalid_options[*]}" "${available_options[*]}"
+      fi
+
+      printf "> Generating manifests for folders: ${valid_options[*]}\n\n"
+
+      if [[ ${#valid_options[@]} -gt 0 ]]; then  
+        if [[ "$MODE" == "sequential" ]]; then
+          # In sequential mode, paths need to be converted to go package notation (e.g., ./charts/...)
+          overwrite_paths "${valid_options[@]}"
+          $REPO_ROOT/hack/generate-sequential.sh ${valid_options[@]}
+        else
+          $REPO_ROOT/hack/generate-parallel.sh ${valid_options[@]}
+        fi
       fi
       ;;
     logcheck)
