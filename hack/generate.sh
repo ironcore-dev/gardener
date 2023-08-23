@@ -57,6 +57,34 @@ overwrite_paths() {
   echo "${updated_paths[*]}"
 }
 
+validate_options() {
+    local which=()
+    IFS=' ' read -ra which <<< "$1"
+
+    local available_options=("${!2}")
+    local valid_options=()
+    local invalid_options=()
+
+    for option in "${which[@]}"; do
+        valid=false
+
+        for valid_option in "${available_options[@]}"; do
+            if [[ "$option" == "$valid_option" ]]; then
+                valid=true
+                break
+            fi
+        done
+
+        if $valid; then
+            valid_options+=("$option")
+        else
+            invalid_options+=("$option")
+        fi
+    done
+
+    echo "${valid_options[*]}:${invalid_options[*]}"
+}
+
 run_target() {
   local target=$1
   case "$target" in
@@ -70,31 +98,17 @@ run_target() {
       IFS=' ' read -ra available_options <<< "charts cmd example extensions pkg plugin test"
       if [[ -z "$WHICH" ]]; then
         WHICH=("${available_options[@]}")
-      fi
-
-      valid_options=()
-      invalid_options=()
-      
-      IFS=' ' read -ra WHICH_ARRAY <<< "$WHICH"
-      for option in "${WHICH_ARRAY[@]}"; do
-          valid=false
-      
-          for valid_option in "${available_options[@]}"; do
-              if [[ "$option" == "$valid_option" ]]; then
-                  valid=true
-                  break
-              fi
-          done
-      
-          if $valid; then
-              valid_options+=("$option")
-          else
-              invalid_options+=("$option")
-          fi
-      done
-      
-      if [[ ${#invalid_options[@]} -gt 0 ]]; then
-          printf "Skipping invalid options: %s, Available options are: %s\n\n" "${invalid_options[*]}" "${available_options[*]}"
+        valid_options=("${available_options[@]}")
+      else
+        result=$(validate_options "$WHICH" available_options[@])
+        IFS=':' read -ra results_array <<< "$result"
+        
+        valid_options=("${results_array[0]}")
+        invalid_options=("${results_array[1]}")
+        
+        if [[ ${#invalid_options[@]} -gt 0 ]]; then
+            printf "\nSkipping invalid options: %s, Available options are: %s\n\n" "${invalid_options[*]}" "${available_options[*]}"
+        fi
       fi
 
       printf "> Generating manifests for folders: ${valid_options[*]}\n\n"
