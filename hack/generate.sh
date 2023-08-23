@@ -19,6 +19,35 @@ set -e
 WHAT="protobuf codegen manifests logcheck gomegacheck monitoring-docs"
 WHICH=""
 MODE="parallel"
+AVAILABLE_CODEGEN_OPTIONS=(
+  "authentication_groups"
+  "core_groups"
+  "extensions_groups"
+  "resources_groups"
+  "operator_groups"
+  "seedmanagement_groups"
+  "operations_groups"
+  "settings_groups"
+  "operatorconfig_groups"
+  "controllermanager_groups"
+  "admissioncontroller_groups"
+  "scheduler_groups"
+  "gardenlet_groups"
+  "resourcemanager_groups"
+  "shoottolerationrestriction_groups"
+  "shootdnsrewriting_groups"
+  "provider_local_groups"
+  "extensions_config_groups"
+)
+AVAILABLE_MANIFESTS_OPTIONS=(
+  "charts"
+  "cmd"
+  "example"
+  "extensions"
+  "pkg"
+  "plugin"
+  "test"
+)
 
 parse_flags() {
   while test $# -gt 0; do
@@ -92,10 +121,44 @@ run_target() {
       $REPO_ROOT/hack/update-protobuf.sh
       ;;
     codegen)
-      $REPO_ROOT/hack/update-codegen.sh --"$MODE"
+      IFS=' ' read -ra available_options <<< "${AVAILABLE_CODEGEN_OPTIONS[@]}"
+      if [[ -z "$WHICH" ]]; then
+        WHICH=("${available_options[@]}")
+        valid_options=("${available_options[@]}")
+      else
+        result=$(validate_options "$WHICH" available_options[@])
+        IFS=':' read -ra results_array <<< "$result"
+        
+        valid_options=("${results_array[0]}")
+        invalid_options=("${results_array[1]}")
+
+
+        valid_options=("${valid_options[@]##*( )}")
+        valid_options=("${valid_options[@]%%*( )}")
+
+        invalid_options=("${invalid_options[@]##*( )}")
+        invalid_options=("${invalid_options[@]%%*( )}")
+
+
+        echo "Validation result: $result"
+        echo "valid options: ${valid_options[*]}"
+        echo "invalid options: ${invalid_options[*]}"
+        
+        trimmed_invalid_options="${invalid_options[*]// /}"
+
+        if [[ ${#invalid_options[@]} -gt 0 ]]; then
+            printf "\nSkipping invalid options: %s, Available options are: %s\n\n" "${invalid_options[*]}" "${available_options[*]}"
+        fi
+      fi
+
+      
+      if [[ ${#valid_options[@]} -gt 0 ]]; then  
+        printf "> Running codegen for groups: ${valid_options[*]}\n\n"
+        $REPO_ROOT/hack/update-codegen.sh --which "$valid_options" --mode "$MODE"
+      fi
       ;;
     manifests)
-      IFS=' ' read -ra available_options <<< "charts cmd example extensions pkg plugin test"
+      IFS=' ' read -ra available_options <<< "${AVAILABLE_MANIFESTS_OPTIONS[@]}"
       if [[ -z "$WHICH" ]]; then
         WHICH=("${available_options[@]}")
         valid_options=("${available_options[@]}")

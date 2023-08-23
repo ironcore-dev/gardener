@@ -18,6 +18,28 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
+WHICH=(
+  authentication_groups
+  core_groups
+  extensions_groups
+  resources_groups
+  operator_groups
+  seedmanagement_groups
+  operations_groups
+  settings_groups
+  operatorconfig_groups
+  controllermanager_groups
+  admissioncontroller_groups
+  scheduler_groups
+  gardenlet_groups
+  shoottolerationrestriction_groups
+  shootdnsrewriting_groups
+  provider_local_groups
+  extensions_config_groups
+  resourcemanager_groups
+)
+MODE="parallel"
+
 # Friendly reminder if workspace location is not in $GOPATH
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 if [ "${SCRIPT_DIR}" != "$(realpath $GOPATH)/src/github.com/gardener/gardener/hack" ]; then
@@ -35,6 +57,28 @@ rm -f ${GOPATH}/bin/*-gen
 CURRENT_DIR=$(dirname $0)
 PROJECT_ROOT="${CURRENT_DIR}"/..
 export PROJECT_ROOT
+
+parse_flags() {
+  while test $# -gt 0; do
+    case "$1" in
+      --mode)
+        shift
+        if [[ -n "$1" ]]; then
+        MODE="$1"
+        fi
+        ;;
+      --which)
+        shift
+        WHICH="${1:-$WHICH}"
+        ;;
+      *)
+        echo "Unknown argument: $1"
+        exit 1
+        ;;
+    esac
+    shift
+  done
+}
 
 # core.gardener.cloud APIs
 
@@ -449,46 +493,20 @@ openapi_definitions() {
 }
 export -f openapi_definitions
 
-if [[ $# -gt 0 && "$1" == "--parallel" ]]; then
-  shift 1
-  parallel --will-cite ::: \
-    authentication_groups \
-    core_groups \
-    extensions_groups \
-    resources_groups \
-    operator_groups \
-    seedmanagement_groups \
-    operations_groups \
-    settings_groups \
-    operatorconfig_groups \
-    controllermanager_groups \
-    admissioncontroller_groups \
-    scheduler_groups \
-    gardenlet_groups \
-    shoottolerationrestriction_groups \
-    shootdnsrewriting_groups \
-    provider_local_groups \
-    extensions_config_groups \
-    resourcemanager_groups
+parse_flags "$@"
+
+echo "WHICH: $WHICH"
+
+if [[ "$MODE" == "parallel" ]]; then
+  echo "Running parallel"
+  parallel --will-cite ::: "${WHICH[@]}"
 else
-  authentication_groups
-  core_groups
-  extensions_groups
-  resources_groups
-  operator_groups
-  seedmanagement_groups
-  operations_groups
-  settings_groups
-  operatorconfig_groups
-  controllermanager_groups
-  admissioncontroller_groups
-  scheduler_groups
-  gardenlet_groups
-  resourcemanager_groups
-  shoottolerationrestriction_groups
-  shootdnsrewriting_groups
-  provider_local_groups
-  extensions_config_groups
+  echo "Running sequential"
+  for cmd in "${WHICH[@]}"; do
+    echo "Executing: $cmd"
+    "$cmd"
+  done
 fi
+
 
 openapi_definitions "$@"
