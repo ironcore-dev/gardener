@@ -139,6 +139,8 @@ for version in "${versions[@]}"; do
   done
 done
 
+cat "${out_dir}/k8s-controllers-${1}.txt"
+
 echo
 echo "kube-controller-manager controllers added in $2 compared to $1:"
 IFS=$'\n' read -r -d '' -a added_lines < <(diff "${out_dir}/k8s-controllers-$1.txt" "${out_dir}/k8s-controllers-$2.txt" | grep '^>' | sed 's/^> //' && printf '\0')
