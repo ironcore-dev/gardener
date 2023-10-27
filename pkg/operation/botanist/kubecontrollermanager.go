@@ -47,6 +47,11 @@ func (b *Botanist) DefaultKubeControllerManager() (kubecontrollermanager.Interfa
 		pods = b.Shoot.Networks.Pods
 	}
 
+	var runtimeConfig map[string]bool
+	if kubeAPIServer := b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer; kubeAPIServer != nil {
+		runtimeConfig = kubeAPIServer.RuntimeConfig
+	}
+
 	return shared.NewKubeControllerManager(
 		b.Logger,
 		b.SeedClientSet,
@@ -67,6 +72,7 @@ func (b *Botanist) DefaultKubeControllerManager() (kubecontrollermanager.Interfa
 		nil,
 		kubecontrollermanager.ControllerWorkers{},
 		kubecontrollermanager.ControllerSyncPeriods{},
+		runtimeConfig,
 	)
 }
 

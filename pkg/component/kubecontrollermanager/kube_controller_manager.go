@@ -155,6 +155,8 @@ type Values struct {
 	ControllerWorkers ControllerWorkers
 	// ControllerSyncPeriods is used for configuring the sync periods for controllers.
 	ControllerSyncPeriods ControllerSyncPeriods
+	// RuntimeConfig contains information about enabled or disabled APIs.
+	RuntimeConfig map[string]bool
 }
 
 // ControllerWorkers is used for configuring the workers for controllers.

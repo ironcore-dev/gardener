@@ -650,6 +650,7 @@ func (r *Reconciler) newKubeControllerManager(
 	var (
 		config                     *gardencorev1beta1.KubeControllerManagerConfig
 		certificateSigningDuration *time.Duration
+		runtimeConfig              map[string]bool
 	)
 
 	if controllerManager := garden.Spec.VirtualCluster.Kubernetes.KubeControllerManager; controllerManager != nil {
@@ -660,6 +661,10 @@ func (r *Reconciler) newKubeControllerManager(
 	_, services, err := net.ParseCIDR(garden.Spec.VirtualCluster.Networking.Services)
 	if err != nil {
 		return nil, fmt.Errorf("cannot parse service network CIDR: %w", err)
+	}
+
+	if kubeAPIServer := garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer; kubeAPIServer != nil {
+		runtimeConfig = kubeAPIServer.RuntimeConfig
 	}
 
 	return sharedcomponent.NewKubeControllerManager(
@@ -686,6 +691,7 @@ func (r *Reconciler) newKubeControllerManager(
 		kubecontrollermanager.ControllerSyncPeriods{
 			ResourceQuota: pointer.Duration(time.Minute),
 		},
+		runtimeConfig,
 	)
 }
 
