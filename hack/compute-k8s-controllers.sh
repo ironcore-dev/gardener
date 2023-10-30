@@ -119,6 +119,9 @@ for version in "${versions[@]}"; do
     if [ -f "$file_path" ]; then
       # Find lines containing 'k8s.io/api/' in the file, and extract content after 'k8s.io/api/' up to
       # the next double quote. This will be the API groups used for this controller.
+      package_name=$(grep -m 1 '^package [[:alnum:]]\+$' "$file_path" | awk '{print $2}')
+      printf "\ncontroller: $controller\t package_name: $package_name \t file_name: ${path_map[$controller]}"
+
       api_groups=$(grep -o 'k8s\.io/api/[^"]*' "$file_path" | awk -F 'k8s.io/api/' '{print $2}')
       for api_group in $api_groups
       do
