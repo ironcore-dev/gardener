@@ -15,6 +15,7 @@
 # limitations under the License.
 
 set -e
+set -x
 
 usage() {
   echo "Usage:"
@@ -83,6 +84,9 @@ declare -A package_map=(
   ["ttl-after-finished"]="ttlafterfinished"
 )
 
+kcm_dir="pkg/controller"
+ccm_dir="staging/src/k8s.io/cloud-provider/controllers"
+
 for version in "${versions[@]}"; do
   rm -rf "${out_dir}/kubernetes-${version}"
   rm -f "${out_dir}/k8s-controllers-${version}.txt"
@@ -105,9 +109,9 @@ for version in "${versions[@]}"; do
   fi
 
   for name in $names; do
-    if [ ! "${path_map[$name]}" ]; then
-      echo "No path mapping found for $name", The controller could have been removed or the path might have changed.
-      echo "Please enhance the map in the script with the path for this controller."
+    if [ ! "${package_map[$name]}" ]; then
+      echo "No package mapping found for $name", The controller could have been removed or the package name might have changed.
+      echo "Please enhance the map in the script with the correct package name for this controller."
       exit 1
     fi
   done
@@ -116,26 +120,31 @@ for version in "${versions[@]}"; do
   declare -A api_group_controllers
 
   for controller in $names; do
-    file_path="${out_dir}/kubernetes-${version}/${path_map[$controller]}"
-    if [ -f "$file_path" ]; then
-      # Find lines containing 'k8s.io/api/' in the file, and extract content after 'k8s.io/api/' up to
-      # the next double quote. This will be the API groups used for this controller.
-      package_name=$(grep -m 1 '^package [[:alnum:]]\+$' "$file_path" | awk '{print $2}')
-      printf "\ncontroller: $controller\t package_name: $package_name \t file_name: ${path_map[$controller]}"
+    package_name="${package_map[$controller]}"
+    
+    groups=()
+    for dir in "$kcm_dir" "$ccm_dir"; do
+      file_path="${out_dir}/kubernetes-${version}/${dir}"
+      files+=$(grep -rl "^package $package_name" "$dir")
+    
+      for file in "$files"; do
+        # Find lines containing 'k8s.io/api/' in the file, and extract content after 'k8s.io/api/' up to
+        # the next double quote. This will be the API groups used for this controller.
+        groups+=$(grep -o 'k8s\.io/api/[^"]*' "$file" | awk -F 'k8s.io/api/' '{print $2}')
+      done 
+    done
 
-      api_groups=$(grep -o 'k8s\.io/api/[^"]*' "$file_path" | awk -F 'k8s.io/api/' '{print $2}')
-      for api_group in $api_groups
-      do
-          api_group=$(echo "$api_group" | tr -d '[:space:]')
-          # Add controller to the corresponding API group key in the map
-          if [ -n "$api_group" ]; then
-              api_group_controllers["$api_group"]+="$controller "
-          fi
-      done
-    else
-      echo "The file $file_path cannot be found. Please enhance the map in the script with the correct path for this controller."
-      exit 1
-    fi
+    api_groups=$(echo "${groups[@]}" | tr ' ' '\n' | sort -u)
+    
+    ## if apigroups are empty, something is missing, error maybe?
+    ##
+    for api_group in $api_groups; do
+      api_group=$(echo "$api_group" | tr -d '[:space:]')
+      # Add controller to the corresponding API group key in the map
+      if [ -n "$api_group" ]; then
+          api_group_controllers["$api_group"]+="$controller "
+      fi
+    done
   done
 
   for api_group in "${!api_group_controllers[@]}"; do
