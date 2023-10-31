@@ -121,28 +121,32 @@ for version in "${versions[@]}"; do
 
   for controller in $names; do
     package_name="${package_map[$controller]}"
-    
+
     groups=()
     for dir in "$kcm_dir" "$ccm_dir"; do
-      file_path="${out_dir}/kubernetes-${version}/${dir}"
-      files+=$(grep -rl "^package $package_name" "$dir")
-    
-      for file in "$files"; do
-        # Find lines containing 'k8s.io/api/' in the file, and extract content after 'k8s.io/api/' up to
-        # the next double quote. This will be the API groups used for this controller.
-        groups+=$(grep -o 'k8s\.io/api/[^"]*' "$file" | awk -F 'k8s.io/api/' '{print $2}')
-      done 
+      echo "Processing directory: $dir"
+      files_in_package=$(grep -rl "^package $package_name\\b" "${out_dir}/kubernetes-${version}/${dir}" || true)
+
+      if [ -n "$files_in_package" ]; then
+        IFS=$'\n' read -ra files <<< "$files_in_package"
+        for file in "${files[@]}"; do
+          # Find lines containing 'k8s.io/api/' in the file, and extract content after 'k8s.io/api/' up to
+          # the next double quote. This will be the API groups used for this controller.
+          groups+=$(grep -o 'k8s\.io/api/[^"]*' "$file" | awk -F 'k8s.io/api/' '{print $2}')
+        done
+      fi
     done
 
+
     api_groups=$(echo "${groups[@]}" | tr ' ' '\n' | sort -u)
-    
+
     ## if apigroups are empty, something is missing, error maybe?
     ##
     for api_group in $api_groups; do
       api_group=$(echo "$api_group" | tr -d '[:space:]')
       # Add controller to the corresponding API group key in the map
       if [ -n "$api_group" ]; then
-          api_group_controllers["$api_group"]+="$controller "
+        api_group_controllers["$api_group"]+="$controller "
       fi
     done
   done
@@ -153,6 +157,7 @@ for version in "${versions[@]}"; do
 done
 
 cat "${out_dir}/k8s-controllers-${1}.txt"
+cat "${out_dir}/k8s-controllers-${2}.txt"
 
 echo
 echo "kube-controller-manager controllers added in $2 compared to $1:"
