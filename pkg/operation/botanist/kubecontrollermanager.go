@@ -47,10 +47,8 @@ func (b *Botanist) DefaultKubeControllerManager() (kubecontrollermanager.Interfa
 		pods = b.Shoot.Networks.Pods
 	}
 
-	var runtimeConfig map[string]bool
-	if kubeAPIServer := b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer; kubeAPIServer != nil {
-		runtimeConfig = kubeAPIServer.RuntimeConfig
-	}
+	// Check if this is safe and will work for garden controller also.
+	runtimeConfig := b.Shoot.Components.ControlPlane.KubeAPIServer.GetValues().RuntimeConfig
 
 	return shared.NewKubeControllerManager(
 		b.Logger,
@@ -83,6 +81,7 @@ func (b *Botanist) DeployKubeControllerManager(ctx context.Context) error {
 		return err
 	}
 	b.Shoot.Components.ControlPlane.KubeControllerManager.SetReplicaCount(replicaCount)
+	b.Shoot.Components.ControlPlane.KubeControllerManager.SetRuntimeConfig(b.Shoot.Components.ControlPlane.KubeAPIServer.GetValues().RuntimeConfig)
 
 	return b.Shoot.Components.ControlPlane.KubeControllerManager.Deploy(ctx)
 }

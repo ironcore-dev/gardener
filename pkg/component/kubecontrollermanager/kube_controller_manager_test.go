@@ -740,6 +740,91 @@ namespace: kube-system
 			Entry("with NodeMonitorGradePeriod", configWithNodeMonitorGracePeriod, hvpaConfigDisabled, controllerWorkers),
 			Entry("with disabled controllers", configWithNodeMonitorGracePeriod, hvpaConfigDisabled, controllerWorkersWithDisabledControllers),
 		)
+
+		FDescribeTable("success tests for various kubernetes versions and runtimeConfig(workerless shoot)",
+			func(config *gardencorev1beta1.KubeControllerManagerConfig, runtimeConfig map[string]bool, expectedCommand string) {
+				isWorkerless = true
+				semverVersion, err := semver.NewVersion(version)
+				Expect(err).NotTo(HaveOccurred())
+
+				values = Values{
+					RuntimeVersion:         runtimeKubernetesVersion,
+					TargetVersion:          semverVersion,
+					Image:                  image,
+					Config:                 config,
+					PriorityClassName:      priorityClassName,
+					IsWorkerless:           isWorkerless,
+					PodNetwork:             podCIDR,
+					ServiceNetwork:         serviceCIDR,
+					ClusterSigningDuration: clusterSigningDuration,
+					ControllerWorkers:      controllerWorkers,
+					ControllerSyncPeriods:  controllerSyncPeriods,
+				}
+				kubeControllerManager = New(testLogger, fakeInterface, namespace, sm, values)
+				kubeControllerManager.SetReplicaCount(replicas)
+				kubeControllerManager.SetRuntimeConfig(runtimeConfig)
+
+				Expect(kubeControllerManager.Deploy(ctx)).To(Succeed())
+
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+				expectedMr := &resourcesv1alpha1.ManagedResource{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
+						Kind:       "ManagedResource",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:            managedResource.Name,
+						Namespace:       managedResource.Namespace,
+						ResourceVersion: "1",
+						Labels:          map[string]string{"origin": "gardener"},
+					},
+					Spec: resourcesv1alpha1.ManagedResourceSpec{
+						InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
+						SecretRefs: []corev1.LocalObjectReference{{
+							Name: managedResource.Spec.SecretRefs[0].Name,
+						}},
+						KeepObjects: pointer.Bool(true),
+					},
+				}
+				utilruntime.Must(references.InjectAnnotations(expectedMr))
+				Expect(managedResource).To(DeepEqual(expectedMr))
+
+				managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
+				Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
+				Expect(managedResourceSecret.Immutable).To(Equal(pointer.Bool(true)))
+				Expect(managedResourceSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
+
+				actualDeployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "kube-controller-manager", Namespace: namespace}}
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(actualDeployment), actualDeployment)).To(Succeed())
+				Expect(actualDeployment.Spec.Template.Spec.Containers[0].Command).To(ContainElement(expectedCommand))
+			},
+
+			Entry("with empty runtimeConfig",
+				configWithNodeMonitorGracePeriod,
+				map[string]bool{},
+				"--controllers=*,bootstrapsigner,tokencleaner,-attachdetach,-cloud-node-lifecycle,-nodeipam,-nodelifecycle,-persistentvolume-binder,-persistentvolume-expander,-ttl",
+			),
+			Entry("with disabled APIs",
+				configWithNodeMonitorGracePeriod,
+				map[string]bool{
+					"apps/v1": false,
+				},
+				"--controllers=*,bootstrapsigner,tokencleaner,-attachdetach,-cloud-node-lifecycle,-daemonset,-deployment,-nodeipam,-nodelifecycle,-persistentvolume-binder,-persistentvolume-expander,-replicaset,-statefulset,-ttl",
+			),
+			Entry("with disabled APIs",
+				configWithNodeMonitorGracePeriod,
+				map[string]bool{
+					"autoscaling/v2":                 false,
+					"batch/v1":                       false,
+					"apps/v1":                        true,
+					"policy/v1/poddisruptionbudgets": false,
+					"storage.k8s.io/v1/csidrivers":   false,
+					"storage.k8s.io/v1/csinodes":     false,
+				},
+				"--controllers=*,bootstrapsigner,tokencleaner,-attachdetach,-cloud-node-lifecycle,-cronjob,-horizontalpodautoscaling,-job,-nodeipam,-nodelifecycle,-persistentvolume-binder,-persistentvolume-expander,-ttl,-ttl-after-finished",
+			),
+		)
 	})
 
 	Describe("#Destroy", func() {

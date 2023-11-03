@@ -42,7 +42,7 @@ var APIGroupControllerMap = map[string]map[string]VersionRange{
 		"nodelifecycle":      {},
 		"storage-version-gc": {},
 	},
-	"core/v1": {
+	"v1": {
 		"attachdetach":                         {},
 		"bootstrapsigner":                      {},
 		"cloud-node-lifecycle":                 {},
@@ -79,7 +79,7 @@ var APIGroupControllerMap = map[string]map[string]VersionRange{
 		"statefulset":                          {},
 		"tokencleaner":                         {},
 		"ttl":                                  {},
-		"ttl-after-finished},":                 {},
+		"ttl-after-finished":                   {},
 	},
 	"batch/v1": {
 		"cronjob":            {},
