@@ -761,6 +761,31 @@ message ETCDEncryptionKeyRotation {
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastCompletionTriggeredTime = 5;
 }
 
+// EncryptionConfig contains customizable encryption configuration of the API server.
+message EncryptionConfig {
+  // Resources contains the list of resources that shall be encrypted in addition to secrets.
+  // Each item is a Kubernetes resource name in plural (resource or resource.group) or a wildcard ('*.*' or '*.<group>')
+  // that should be encrypted. Note that wildcards are only supported for Kubernetes versions >= v1.27 and configuring a CRD
+  // is only supported for  versions >= 1.26. '*.<group>' and resource.group should not be used together.
+  // See https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/#understanding-the-encryption-at-rest-configuration for more details.
+  // Only additional resources can be added, but no resources can be removed. If resources are added, users need to issue
+  // update requests for all existing objects (e.g. empty patches) to encrypt the data in etcd.
+  // +optional
+  repeated string resources = 1;
+
+  // ExcludedResources contains the list of resources that shall be excluded from encryption.
+  // Each item is a Kubernetes resource name that should be excluded from the resource.
+  // This is useful when a wildcard ('*.*' or '*.<group>')is used for the encryptionConfig.resources.
+  // Note that the resources can be added here only before the wildcard entry for the resource group is added in encryptionConfig.resources.
+  // Removal of items are allowed. If existing items are removed, users need to issue update requests for all existing objects (e.g. empty patches)
+  // to encrypt the data in etcd.
+  // Note that wildcards are only supported for Kubernetes versions >= v1.27 and configuring a CRD
+  // is only supported for  versions >= 1.26. '*.<group>' and resource.group should not be used together.
+  // See https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/#understanding-the-encryption-at-rest-configuration for more details.
+  // +optional
+  repeated string excludedResources = 2;
+}
+
 // ExpirableVersion contains a version and an expiration date.
 message ExpirableVersion {
   // Version is the version identifier.
@@ -1093,6 +1118,10 @@ message KubeAPIServerConfig {
   // Defaults to 300.
   // +optional
   optional int64 defaultUnreachableTolerationSeconds = 15;
+
+  // EncryptionConfig contains customizable encryption configuration of the API server.
+  // +optional
+  optional EncryptionConfig encryptionConfig = 16;
 }
 
 // KubeControllerManagerConfig contains configuration settings for the kube-controller-manager.

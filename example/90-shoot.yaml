@@ -209,6 +209,13 @@ spec:
   #     httpAccessVerbosity: 3
   #   defaultNotReadyTolerationSeconds: 300
   #   defaultUnreachableTolerationSeconds: 300
+  #   encryptionConfig: # See: https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/
+  #     resources: # secrets are always encrypted
+  #     - configmaps
+  #     - customresource.fancyoperator.io
+  #     - '*.fancyresource.io'
+  #     excludedResources:
+  #     - random.fancyresource.io
   # kubeControllerManager:
   #   nodeCIDRMaskSize: 24
   #   podEvictionTimeout: 2m0s

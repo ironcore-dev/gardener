@@ -957,6 +957,50 @@ spec:
                               anonymous requests to the secure port of the API server
                               should be allowed (flag `--anonymous-auth`). See: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/'
                             type: boolean
+                          encryptionConfig:
+                            description: EncryptionConfig contains customizable encryption
+                              configuration of the API server.
+                            properties:
+                              excludedResources:
+                                description: ExcludedResources contains the list of
+                                  resources that shall be excluded from encryption.
+                                  Each item is a Kubernetes resource name that should
+                                  be excluded from the resource. This is useful when
+                                  a wildcard ('*.*' or '*.<group>')is used for the
+                                  encryptionConfig.resources. Note that the resources
+                                  can be added here only before the wildcard entry
+                                  for the resource group is added in encryptionConfig.resources.
+                                  Removal of items are allowed. If existing items
+                                  are removed, users need to issue update requests
+                                  for all existing objects (e.g. empty patches) to
+                                  encrypt the data in etcd. Note that wildcards are
+                                  only supported for Kubernetes versions >= v1.27
+                                  and configuring a CRD is only supported for  versions
+                                  >= 1.26. '*.<group>' and resource.group should not
+                                  be used together. See https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/#understanding-the-encryption-at-rest-configuration
+                                  for more details.
+                                items:
+                                  type: string
+                                type: array
+                              resources:
+                                description: Resources contains the list of resources
+                                  that shall be encrypted in addition to secrets.
+                                  Each item is a Kubernetes resource name in plural
+                                  (resource or resource.group) or a wildcard ('*.*'
+                                  or '*.<group>') that should be encrypted. Note that
+                                  wildcards are only supported for Kubernetes versions
+                                  >= v1.27 and configuring a CRD is only supported
+                                  for  versions >= 1.26. '*.<group>' and resource.group
+                                  should not be used together. See https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/#understanding-the-encryption-at-rest-configuration
+                                  for more details. Only additional resources can
+                                  be added, but no resources can be removed. If resources
+                                  are added, users need to issue update requests for
+                                  all existing objects (e.g. empty patches) to encrypt
+                                  the data in etcd.
+                                items:
+                                  type: string
+                                type: array
+                            type: object
                           eventTTL:
                             description: EventTTL controls the amount of time to retain
                               events. Defaults to 1h.

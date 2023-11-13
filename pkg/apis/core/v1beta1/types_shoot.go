@@ -747,6 +747,9 @@ type KubeAPIServerConfig struct {
 	// Defaults to 300.
 	// +optional
 	DefaultUnreachableTolerationSeconds *int64 `json:"defaultUnreachableTolerationSeconds,omitempty" protobuf:"varint,15,opt,name=defaultUnreachableTolerationSeconds"`
+	// EncryptionConfig contains customizable encryption configuration of the API server.
+	// +optional
+	EncryptionConfig *EncryptionConfig `json:"encryptionConfig,omitempty" protobuf:"bytes,16,opt,name=encryptionConfig"`
 }
 
 // APIServerLogging contains configuration for the logs level and http access logs
@@ -770,6 +773,30 @@ type APIServerRequests struct {
 	// exceeds this, it rejects requests.
 	// +optional
 	MaxMutatingInflight *int32 `json:"maxMutatingInflight,omitempty" protobuf:"bytes,2,name=maxMutatingInflight"`
+}
+
+// EncryptionConfig contains customizable encryption configuration of the API server.
+type EncryptionConfig struct {
+	// Resources contains the list of resources that shall be encrypted in addition to secrets.
+	// Each item is a Kubernetes resource name in plural (resource or resource.group) or a wildcard ('*.*' or '*.<group>')
+	// that should be encrypted. Note that wildcards are only supported for Kubernetes versions >= v1.27 and configuring a CRD
+	// is only supported for  versions >= 1.26. '*.<group>' and resource.group should not be used together.
+	// See https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/#understanding-the-encryption-at-rest-configuration for more details.
+	// Only additional resources can be added, but no resources can be removed. If resources are added, users need to issue
+	// update requests for all existing objects (e.g. empty patches) to encrypt the data in etcd.
+	// +optional
+	Resources []string `json:"resources,omitempty" protobuf:"bytes,1,rep,name=resources"`
+	// ExcludedResources contains the list of resources that shall be excluded from encryption.
+	// Each item is a Kubernetes resource name that should be excluded from the resource.
+	// This is useful when a wildcard ('*.*' or '*.<group>')is used for the encryptionConfig.resources.
+	// Note that the resources can be added here only before the wildcard entry for the resource group is added in encryptionConfig.resources.
+	// Removal of items are allowed. If existing items are removed, users need to issue update requests for all existing objects (e.g. empty patches)
+	// to encrypt the data in etcd.
+	// Note that wildcards are only supported for Kubernetes versions >= v1.27 and configuring a CRD
+	// is only supported for  versions >= 1.26. '*.<group>' and resource.group should not be used together.
+	// See https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/#understanding-the-encryption-at-rest-configuration for more details.
+	// +optional
+	ExcludedResources []string `json:"excludedResources,omitempty" protobuf:"bytes,2,rep,name=excludedResources"`
 }
 
 // ServiceAccountConfig is the kube-apiserver configuration for service accounts.
