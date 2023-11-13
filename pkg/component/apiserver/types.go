@@ -116,4 +116,6 @@ type ETCDEncryptionConfig struct {
 	EncryptWithCurrentKey bool
 	// Resources are the resources which should be encrypted.
 	Resources []string
+	// Resources are the resources which should be excluded from encryption.
+	ExcludedResources []string
 }

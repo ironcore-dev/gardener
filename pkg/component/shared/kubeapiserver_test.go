@@ -1166,7 +1166,7 @@ exemptions:
 			Entry("no rotation",
 				gardencorev1beta1.CredentialsRotationPhase(""),
 				nil,
-				apiserver.ETCDEncryptionConfig{EncryptWithCurrentKey: true, Resources: []string{"secrets"}},
+				apiserver.ETCDEncryptionConfig{EncryptWithCurrentKey: true, Resources: []string{"secrets"}, ExcludedResources: []string{}},
 				nil,
 			),
 			Entry("preparing phase, new key already populated",
@@ -1180,7 +1180,7 @@ exemptions:
 						},
 					})).To(Succeed())
 				},
-				apiserver.ETCDEncryptionConfig{RotationPhase: gardencorev1beta1.RotationPreparing, EncryptWithCurrentKey: true, Resources: []string{"secrets"}},
+				apiserver.ETCDEncryptionConfig{RotationPhase: gardencorev1beta1.RotationPreparing, EncryptWithCurrentKey: true, Resources: []string{"secrets"}, ExcludedResources: []string{}},
 				nil,
 			),
 			Entry("preparing phase, new key not yet populated",
@@ -1199,10 +1199,11 @@ exemptions:
 						RotationPhase:         gardencorev1beta1.RotationPreparing,
 						EncryptWithCurrentKey: true,
 						Resources:             []string{"secrets"},
+						ExcludedResources:     []string{},
 					})
 					kubeAPIServer.EXPECT().Deploy(ctx)
 				},
-				apiserver.ETCDEncryptionConfig{RotationPhase: gardencorev1beta1.RotationPreparing, EncryptWithCurrentKey: false, Resources: []string{"secrets"}},
+				apiserver.ETCDEncryptionConfig{RotationPhase: gardencorev1beta1.RotationPreparing, EncryptWithCurrentKey: false, Resources: []string{"secrets"}, ExcludedResources: []string{}},
 				func() {
 					deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver", Namespace: namespace}}
 					Expect(runtimeClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
@@ -1212,7 +1213,7 @@ exemptions:
 			Entry("prepared phase",
 				gardencorev1beta1.RotationPrepared,
 				nil,
-				apiserver.ETCDEncryptionConfig{RotationPhase: gardencorev1beta1.RotationPrepared, EncryptWithCurrentKey: true, Resources: []string{"secrets"}},
+				apiserver.ETCDEncryptionConfig{RotationPhase: gardencorev1beta1.RotationPrepared, EncryptWithCurrentKey: true, Resources: []string{"secrets"}, ExcludedResources: []string{}},
 				nil,
 			),
 			Entry("completing phase",
@@ -1226,7 +1227,7 @@ exemptions:
 						},
 					})).To(Succeed())
 				},
-				apiserver.ETCDEncryptionConfig{RotationPhase: gardencorev1beta1.RotationCompleting, EncryptWithCurrentKey: true, Resources: []string{"secrets"}},
+				apiserver.ETCDEncryptionConfig{RotationPhase: gardencorev1beta1.RotationCompleting, EncryptWithCurrentKey: true, Resources: []string{"secrets"}, ExcludedResources: []string{}},
 				func() {
 					deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver", Namespace: namespace}}
 					Expect(runtimeClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
@@ -1236,7 +1237,7 @@ exemptions:
 			Entry("completed phase",
 				gardencorev1beta1.RotationCompleted,
 				nil,
-				apiserver.ETCDEncryptionConfig{RotationPhase: gardencorev1beta1.RotationCompleted, EncryptWithCurrentKey: true, Resources: []string{"secrets"}},
+				apiserver.ETCDEncryptionConfig{RotationPhase: gardencorev1beta1.RotationCompleted, EncryptWithCurrentKey: true, Resources: []string{"secrets"}, ExcludedResources: []string{}},
 				nil,
 			),
 		)

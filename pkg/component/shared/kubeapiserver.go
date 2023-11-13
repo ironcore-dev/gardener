@@ -29,6 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apimachinery/pkg/util/sets"
 	admissionapiv1 "k8s.io/pod-security-admission/admission/api/v1"
 	admissionapiv1alpha1 "k8s.io/pod-security-admission/admission/api/v1alpha1"
 	admissionapiv1beta1 "k8s.io/pod-security-admission/admission/api/v1beta1"
@@ -246,7 +247,15 @@ func DeployKubeAPIServer(
 	kubeAPIServer.SetExternalHostname(externalHostname)
 	kubeAPIServer.SetExternalServer(externalServer)
 
-	etcdEncryptionConfig, err := computeAPIServerETCDEncryptionConfig(ctx, runtimeClient, runtimeNamespace, deploymentName, etcdEncryptionKeyRotationPhase, []string{corev1.Resource("secrets").String()})
+	etcdEncryptionConfig, err := computeAPIServerETCDEncryptionConfig(
+		ctx,
+		runtimeClient,
+		runtimeNamespace,
+		deploymentName,
+		etcdEncryptionKeyRotationPhase,
+		getResourcesForEncryption(apiServerConfig),
+		getExcludedResourcesForEncryption(apiServerConfig),
+	)
 	if err != nil {
 		return err
 	}
@@ -423,4 +432,28 @@ func computeKubeAPIServerServiceAccountConfig(
 	}
 
 	return out
+}
+
+func getResourcesForEncryption(apiServerConfig *gardencorev1beta1.KubeAPIServerConfig) []string {
+	var resources = sets.New[string](corev1.Resource("secrets").String())
+
+	if apiServerConfig != nil && apiServerConfig.EncryptionConfig != nil {
+		resources.Insert(apiServerConfig.EncryptionConfig.Resources...)
+	}
+
+	if resources.Has("*.*") || resources.Has("*.") {
+		resources.Delete(corev1.Resource("secrets").String())
+	}
+
+	return sets.List(resources)
+}
+
+func getExcludedResourcesForEncryption(apiServerConfig *gardencorev1beta1.KubeAPIServerConfig) []string {
+	var resources = sets.New[string]()
+
+	if apiServerConfig != nil && apiServerConfig.EncryptionConfig != nil {
+		resources.Insert(apiServerConfig.EncryptionConfig.ExcludedResources...)
+	}
+
+	return sets.List(resources)
 }
