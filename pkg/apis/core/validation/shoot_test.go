@@ -1794,6 +1794,362 @@ var _ = Describe("Shoot Validation Tests", func() {
 				})
 			})
 
+			Context("encryption config", func() {
+				BeforeEach(func() {
+					shoot.Spec.Kubernetes.Version = "1.28"
+				})
+
+				It("should allow specifying valid resources", func() {
+					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
+						Resources: []string{"configmaps", "nonexistingresource", "postgres.fancyoperator.io"},
+					}
+					Expect(ValidateShoot(shoot)).To(BeEmpty())
+				})
+
+				It("should deny specifying duplicated resources", func() {
+					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
+						Resources:         []string{"configmaps", "configmaps"},
+						ExcludedResources: []string{"deployments.apps", "deployments.apps"},
+					}
+					Expect(ValidateShoot(shoot)).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeDuplicate),
+							"Field": Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.resources[1]"),
+						})),
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":  Equal(field.ErrorTypeDuplicate),
+							"Field": Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.excludedResources[1]"),
+						})),
+					))
+				})
+
+				It("should deny specifying 'secrets' resource in resources", func() {
+					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
+						Resources: []string{"configmaps", "secrets", "secrets."},
+					}
+					Expect(ValidateShoot(shoot)).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeForbidden),
+							"Field":  Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.resources[1]"),
+							"Detail": Equal("secrets are always encrypted"),
+						})),
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeForbidden),
+							"Field":  Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.resources[2]"),
+							"Detail": Equal("secrets are always encrypted"),
+						})),
+					))
+				})
+
+				It("should deny specifying both resource and wildcard for the resource group in resources", func() {
+					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
+						Resources: []string{"*.apps", "deployments.apps", "*.random.operator.cloud", "resource1.random.operator.cloud"},
+					}
+
+					Expect(ValidateShoot(shoot)).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeForbidden),
+							"Field":  Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.resources[1]"),
+							"Detail": Equal("using overlapping resources such as \"deployments.apps\" and \"*.apps\" in the same resource list is not allowed as they will be masked"),
+						})),
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeForbidden),
+							"Field":  Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.resources[3]"),
+							"Detail": Equal("using overlapping resources such as \"resource1.random.operator.cloud\" and \"*.random.operator.cloud\" in the same resource list is not allowed as they will be masked"),
+						})),
+					))
+				})
+
+				It("should deny specifying anymore resources when wildcard for all resources are used", func() {
+					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
+						Resources: []string{"*.*", "deployments.apps"},
+					}
+
+					Expect(ValidateShoot(shoot)).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeForbidden),
+							"Field":  Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.resources"),
+							"Detail": Equal("using overlapping resources when '*.*' wildcard is used in the same resource list is not allowed as they will be masked"),
+						})),
+					))
+				})
+
+				It("should deny specifying 'secrets' resource in excluded resources", func() {
+					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
+						ExcludedResources: []string{"pods", "secrets", "secrets.", "*.apps"},
+					}
+
+					Expect(ValidateShoot(shoot)).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeForbidden),
+							"Field":  Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.excludedResources[1]"),
+							"Detail": Equal("secrets are always encrypted"),
+						})),
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeForbidden),
+							"Field":  Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.excludedResources[2]"),
+							"Detail": Equal("secrets are always encrypted"),
+						})),
+					))
+				})
+
+				It("should deny specifying the same item in both resources in excluded resources", func() {
+					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
+						Resources:         []string{"configmaps"},
+						ExcludedResources: []string{"configmaps"},
+					}
+
+					Expect(ValidateShoot(shoot)).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeForbidden),
+							"Field":  Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.excludedResources[0]"),
+							"Detail": Equal("same resource cannot be mentioned in both resources and excludedResources"),
+						})),
+					))
+				})
+
+				It("should allow adding items in resources", func() {
+					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
+						Resources: []string{"configmaps"},
+					}
+					newShoot := prepareShootForUpdate(shoot)
+					newShoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig.Resources = append(newShoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig.Resources, "myfancystuff")
+
+					Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
+				})
+
+				It("should deny removing items in resources", func() {
+					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
+						Resources: []string{"configmaps", "serviceaccounts"},
+					}
+					newShoot := prepareShootForUpdate(shoot)
+					newShoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig.Resources = []string{"configmaps"}
+
+					Expect(ValidateShootUpdate(newShoot, shoot)).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeForbidden),
+							"Field":  Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.resources"),
+							"Detail": Equal("existing items must not be removed"),
+						})),
+					))
+				})
+
+				It("should allow removing items in excluded resources", func() {
+					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
+						Resources:         []string{"*.*"},
+						ExcludedResources: []string{"configmaps", "serviceaccounts"},
+					}
+					newShoot := prepareShootForUpdate(shoot)
+					newShoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig.ExcludedResources = []string{"configmaps"}
+
+					Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
+				})
+
+				It("should deny using wildcard items in resources for Kubernetes versions < 1.27", func() {
+					shoot.Spec.Kubernetes.Version = "1.26"
+					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
+						Resources:         []string{"*.apps"},
+						ExcludedResources: []string{"*.fancyoperator.io"},
+					}
+
+					Expect(ValidateShoot(shoot)).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":     Equal(field.ErrorTypeInvalid),
+							"Field":    Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.resources"),
+							"BadValue": Equal("*.apps"),
+							"Detail":   Equal("wildcards are only supported for Kubernetes versions >= 1.27"),
+						})),
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":     Equal(field.ErrorTypeInvalid),
+							"Field":    Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.excludedResources"),
+							"BadValue": Equal("*.fancyoperator.io"),
+							"Detail":   Equal("wildcards are only supported for Kubernetes versions >= 1.27"),
+						})),
+					))
+				})
+
+				It("should deny using wildcard items for core resource group in excluded resources", func() {
+					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
+						ExcludedResources: []string{"*."},
+					}
+
+					Expect(ValidateShoot(shoot)).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeForbidden),
+							"Field":  Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.excludedResources[0]"),
+							"Detail": Equal("core group cannot be excluded since secrets are always encrypted"),
+						})),
+					))
+				})
+
+				It("should deny using wildcard items for all resources in excluded resources", func() {
+					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
+						ExcludedResources: []string{"*.*"},
+					}
+
+					Expect(ValidateShoot(shoot)).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeForbidden),
+							"Field":  Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.excludedResources[0]"),
+							"Detail": Equal("all resources cannot be excluded since secrets are always encrypted"),
+						})),
+					))
+				})
+
+				It("should deny using custom resource  for Kubernetes versions < 1.26", func() {
+					shoot.Spec.Kubernetes.Version = "1.25"
+					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
+						Resources:         []string{"deployment.apps", "new.custom.io"},
+						ExcludedResources: []string{"daemonset.apps", "new2.custom.io"},
+					}
+
+					Expect(ValidateShoot(shoot)).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":     Equal(field.ErrorTypeInvalid),
+							"Field":    Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.resources[1]"),
+							"BadValue": Equal("new.custom.io"),
+							"Detail":   Equal("custom resources are only supported for Kubernetes versions >= 1.26"),
+						})),
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":     Equal(field.ErrorTypeInvalid),
+							"Field":    Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.excludedResources[1]"),
+							"BadValue": Equal("new2.custom.io"),
+							"Detail":   Equal("custom resources are only supported for Kubernetes versions >= 1.26"),
+						})),
+					))
+				})
+
+				It("should deny adding an item in excluded resource when the resouces already contains a wild card for that resource group", func() {
+					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
+						Resources:         []string{"configmaps", "*.apps", "*.fancyresource.fancyoperator.io"},
+						ExcludedResources: []string{"fancyresource.fancyoperator.io"},
+					}
+
+					newShoot := prepareShootForUpdate(shoot)
+					newShoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig.ExcludedResources = []string{"deployments.apps"}
+
+					Expect(ValidateShootUpdate(newShoot, shoot)).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeForbidden),
+							"Field":  Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.excludedResources[0]"),
+							"Detail": Equal("cannot exclude this resource since encryptionConfig.resources contains a wildcard item for this resource group. ie; either '*.*' or '*.apps' which means the resource is already encrypted"),
+						})),
+					))
+				})
+
+				It("should deny adding an item in excluded resource when the resouces already contains a wild card for all resource groups", func() {
+					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
+						Resources:         []string{"*.*"},
+						ExcludedResources: []string{"fancyresource.fancyoperator.io"},
+					}
+
+					newShoot := prepareShootForUpdate(shoot)
+					newShoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig.ExcludedResources = []string{"deployments.apps"}
+
+					Expect(ValidateShootUpdate(newShoot, shoot)).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeForbidden),
+							"Field":  Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.excludedResources[0]"),
+							"Detail": Equal("cannot exclude this resource since encryptionConfig.resources contains a wildcard item for this resource group. ie; either '*.*' or '*.apps' which means the resource is already encrypted"),
+						})),
+					))
+				})
+
+				It("should deny adding a wildcard item in excluded resource when the resouces already contains a wild card for all resource groups", func() {
+					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
+						Resources:         []string{"*.*"},
+						ExcludedResources: []string{"fancyresource.fancyoperator.io"},
+					}
+
+					newShoot := prepareShootForUpdate(shoot)
+					newShoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig.ExcludedResources = []string{"*.apps"}
+
+					Expect(ValidateShootUpdate(newShoot, shoot)).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeForbidden),
+							"Field":  Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.excludedResources[0]"),
+							"Detail": Equal("cannot exclude this resource since encryptionConfig.resources contains a wildcard item for all resource groups. ie;'*.*' which means the resource is already encrypted"),
+						})),
+					))
+				})
+
+				It("should allow specifying an item in excluded resource when the resouces contains a wild card for that resource group if it is the same update", func() {
+					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
+						ExcludedResources: []string{"fancyresource.fancyoperator.io"},
+					}
+
+					newShoot := prepareShootForUpdate(shoot)
+					newShoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig.ExcludedResources = []string{"deployments.apps"}
+					newShoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig.Resources = []string{"*.apps"}
+
+					Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
+				})
+
+				It("should allow reordering resources", func() {
+					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
+						Resources:         []string{"configmaps", "pods"},
+						ExcludedResources: []string{"deployments.apps", "daemonsets.apps"},
+					}
+					newShoot := prepareShootForUpdate(shoot)
+					newShoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig.Resources = []string{"pods", "configmaps"}
+					newShoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig.ExcludedResources = []string{"daemonsets.apps", "deployments.apps"}
+
+					Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
+				})
+
+				It("should deny adding items during ETCD Encryption Key rotation", func() {
+					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
+						Resources:         []string{"configmaps"},
+						ExcludedResources: []string{"pods"},
+					}
+					newShoot := prepareShootForUpdate(shoot)
+					newShoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig.Resources = append(newShoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig.Resources, "*.fancyresource.io")
+					newShoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig.ExcludedResources = append(newShoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig.ExcludedResources, "new2.fancyresource.io")
+					newShoot.Status.Credentials = &core.ShootCredentials{
+						Rotation: &core.ShootCredentialsRotation{
+							ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{
+								Phase: core.RotationPreparing,
+							},
+						},
+					}
+
+					Expect(ValidateShootUpdate(newShoot, shoot)).To(ConsistOf(
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeForbidden),
+							"Field":  Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.resources"),
+							"Detail": Equal("resources cannot be changed when .status.credentials.rotation.etcdEncryptionKey.phase is not \"Completed\""),
+						})),
+						PointTo(MatchFields(IgnoreExtras, Fields{
+							"Type":   Equal(field.ErrorTypeForbidden),
+							"Field":  Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.excludedResources"),
+							"Detail": Equal("resources cannot be changed when .status.credentials.rotation.etcdEncryptionKey.phase is not \"Completed\""),
+						})),
+					))
+				})
+
+				It("should allow adding items if ETCD Encryption Key rotation is in phase Completed or was never rotated", func() {
+					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
+						Resources:         []string{"resource.custom.io", "*."},
+						ExcludedResources: []string{"pods"},
+					}
+					newShoot := prepareShootForUpdate(shoot)
+					newShoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig.Resources = append(newShoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig.Resources, "*.fancyresource.io")
+					newShoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig.ExcludedResources = append(newShoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig.ExcludedResources, "new2.fancyresource.io")
+					newShoot.Status.Credentials = nil
+
+					Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
+
+					newShoot.Status.Credentials = &core.ShootCredentials{
+						Rotation: &core.ShootCredentialsRotation{
+							ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{
+								Phase: core.RotationCompleted,
+							},
+						},
+					}
+					Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
+				})
+			})
+
 			Context("WatchCacheSizes validation", func() {
 				var negativeSize int32 = -1
 
