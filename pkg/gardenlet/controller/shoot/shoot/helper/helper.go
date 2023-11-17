@@ -16,7 +16,14 @@ package helper
 
 import (
 	"fmt"
+	"slices"
+	"strings"
 	"time"
+
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/client-go/discovery"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -62,4 +69,120 @@ func IsSeedReadyForMigration(seed *gardencorev1beta1.Seed, identity *gardencorev
 		return fmt.Errorf("seed is marked to be deleted")
 	}
 	return health.CheckSeedForMigration(seed, identity)
+}
+
+// GetResourcesForEncryption returns a list of schema.GroupVersionKind for all the resources that needs to be encrypted. Secrets are
+// returned by default and additional resources if specified in the encryptionConfig are returned.
+func GetResourcesForEncryption(discoveryClient discovery.DiscoveryInterface, kubeAPIServer *gardencorev1beta1.KubeAPIServerConfig) ([]schema.GroupVersionKind, error) {
+	var (
+		encryptedGVKS           = sets.New(corev1.SchemeGroupVersion.WithKind("Secret"))
+		encryptAllResources     bool
+		encryptAllCoreResources bool
+		coreResourcesToEncrypt  = sets.New[string]()
+		groupsToEncrypt         = sets.New[string]()
+		groupResourcesToEncrypt = map[string]sets.Set[string]{}
+	)
+
+	if kubeAPIServer == nil || kubeAPIServer.EncryptionConfig == nil {
+		return encryptedGVKS.UnsortedList(), nil
+	}
+
+	for _, resource := range kubeAPIServer.EncryptionConfig.Resources {
+		if resource == "*.*" {
+			encryptAllResources = true
+			break
+		}
+
+		if strings.HasPrefix(resource, "*.") {
+			group := strings.TrimPrefix(resource, "*.")
+			if group == "" {
+				encryptAllCoreResources = true
+			} else {
+				groupsToEncrypt.Insert(group)
+			}
+			continue
+		}
+
+		var (
+			split    = strings.Split(resource, ".")
+			group    = strings.Join(split[1:], ".")
+			resource = split[0]
+		)
+
+		if len(split) == 1 {
+			coreResourcesToEncrypt.Insert(resource)
+			continue
+		}
+
+		if _, ok := groupResourcesToEncrypt[group]; !ok {
+			groupResourcesToEncrypt[group] = sets.New[string]()
+		}
+
+		groupResourcesToEncrypt[group].Insert(resource)
+	}
+
+	resourceLists, err := discoveryClient.ServerPreferredResources()
+	if err != nil {
+		return encryptedGVKS.UnsortedList(), fmt.Errorf("error disovering server preferred resources: %w", err)
+	}
+
+	excludedResources := sets.New(kubeAPIServer.EncryptionConfig.ExcludedResources...)
+	for _, list := range resourceLists {
+		if len(list.APIResources) == 0 {
+			continue
+		}
+
+		gv, err := schema.ParseGroupVersion(list.GroupVersion)
+		if err != nil {
+			return encryptedGVKS.UnsortedList(), fmt.Errorf("error parsing groupVersion: %w", err)
+		}
+
+		for _, apiResource := range list.APIResources {
+			// If the resource doesn't support get, list and patch, we cannot list and rewrite it
+			if !slices.Contains(apiResource.Verbs, "get") ||
+				!slices.Contains(apiResource.Verbs, "list") ||
+				!slices.Contains(apiResource.Verbs, "patch") {
+				continue
+			}
+
+			var (
+				group                   = gv.Group
+				version                 = gv.Version
+				resourceNeedsEncryption = false
+			)
+
+			if apiResource.Group != "" {
+				group = apiResource.Group
+			}
+			if apiResource.Version != "" {
+				version = apiResource.Version
+			}
+
+			if excludedResources.Has(apiResource.Name) ||
+				excludedResources.Has(fmt.Sprintf("*.%s", group)) ||
+				excludedResources.Has(fmt.Sprintf("%s.%s", apiResource.Name, group)) {
+				continue
+			}
+
+			if encryptAllResources {
+				resourceNeedsEncryption = true
+			} else if group == "" {
+				if encryptAllCoreResources {
+					resourceNeedsEncryption = true
+				} else if coreResourcesToEncrypt.Has(apiResource.Name) {
+					resourceNeedsEncryption = true
+				}
+			} else if groupsToEncrypt.Has(group) {
+				resourceNeedsEncryption = true
+			} else if resources, ok := groupResourcesToEncrypt[group]; ok && resources.Has(apiResource.Name) {
+				resourceNeedsEncryption = true
+			}
+
+			if resourceNeedsEncryption {
+				encryptedGVKS.Insert(schema.GroupVersionKind{Group: group, Version: version, Kind: apiResource.Kind})
+			}
+		}
+	}
+
+	return encryptedGVKS.UnsortedList(), nil
 }

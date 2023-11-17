@@ -19,7 +19,10 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	fakediscovery "k8s.io/client-go/discovery/fake"
 	"k8s.io/utils/pointer"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -191,3 +194,239 @@ var _ = Describe("GetEtcdDeployTimeout", func() {
 		Expect(GetEtcdDeployTimeout(s, defaultTimeout)).To(Equal(etcd.DefaultTimeout))
 	})
 })
+
+var _ = Describe("GetResourcesForEncryption", func() {
+	var fakeDiscoveryClient *fakeDiscoveryWithServerPreferredResources
+
+	BeforeEach(func() {
+		fakeDiscoveryClient = &fakeDiscoveryWithServerPreferredResources{}
+	})
+
+	It("should return the correct GVK list", func() {
+		config := &gardencorev1beta1.KubeAPIServerConfig{
+			EncryptionConfig: &gardencorev1beta1.EncryptionConfig{
+				Resources: []string{
+					"crontabs.stable.example.com",
+					"*.resources.gardener.cloud",
+					"configmaps",
+				},
+			},
+		}
+
+		list, err := GetResourcesForEncryption(fakeDiscoveryClient, config)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(list).To(ConsistOf(
+			schema.GroupVersionKind{Group: "", Version: "v1", Kind: "Secret"},
+			schema.GroupVersionKind{Group: "", Version: "v1", Kind: "ConfigMap"},
+			schema.GroupVersionKind{Group: "stable.example.com", Version: "v1", Kind: "CronTab"},
+			schema.GroupVersionKind{Group: "resources.gardener.cloud", Version: "v1alpha1", Kind: "ManagedResource"},
+		))
+	})
+
+	It("should return the correct GVK list for wildcard matching all resources", func() {
+		config := &gardencorev1beta1.KubeAPIServerConfig{
+			EncryptionConfig: &gardencorev1beta1.EncryptionConfig{
+				Resources: []string{"*.*"},
+				ExcludedResources: []string{
+					"statefulsets.apps",
+					"crontabs.stable.example.com",
+				},
+			},
+		}
+
+		list, err := GetResourcesForEncryption(fakeDiscoveryClient, config)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(list).To(ConsistOf(
+			schema.GroupVersionKind{Group: "", Version: "v1", Kind: "Secret"},
+			schema.GroupVersionKind{Group: "", Version: "v1", Kind: "ConfigMap"},
+			schema.GroupVersionKind{Group: "", Version: "v1", Kind: "Service"},
+			schema.GroupVersionKind{Group: "stable.example.com", Version: "v1", Kind: "CronBar"},
+			schema.GroupVersionKind{Group: "resources.gardener.cloud", Version: "v1alpha1", Kind: "ManagedResource"},
+			schema.GroupVersionKind{Group: "apps", Version: "v1", Kind: "DaemonSet"},
+			schema.GroupVersionKind{Group: "apps", Version: "v1", Kind: "Deployment"},
+		))
+	})
+
+	It("should return the correct GVK list for wildcard matching core group", func() {
+		config := &gardencorev1beta1.KubeAPIServerConfig{
+			EncryptionConfig: &gardencorev1beta1.EncryptionConfig{
+				Resources:         []string{"*."},
+				ExcludedResources: []string{"services"},
+			},
+		}
+
+		list, err := GetResourcesForEncryption(fakeDiscoveryClient, config)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(list).To(ConsistOf(
+			schema.GroupVersionKind{Group: "", Version: "v1", Kind: "Secret"},
+			schema.GroupVersionKind{Group: "", Version: "v1", Kind: "ConfigMap"},
+		))
+	})
+
+	It("should return the correct GVK list for wildcard matching apps group", func() {
+		config := &gardencorev1beta1.KubeAPIServerConfig{
+			EncryptionConfig: &gardencorev1beta1.EncryptionConfig{
+				Resources:         []string{"*.apps"},
+				ExcludedResources: []string{"deployments.apps"},
+			},
+		}
+
+		list, err := GetResourcesForEncryption(fakeDiscoveryClient, config)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(list).To(ConsistOf(
+			schema.GroupVersionKind{Group: "", Version: "v1", Kind: "Secret"},
+			schema.GroupVersionKind{Group: "apps", Version: "v1", Kind: "DaemonSet"},
+			schema.GroupVersionKind{Group: "apps", Version: "v1", Kind: "StatefulSet"},
+		))
+	})
+
+	It("should return the correct GVK list for mix of wildcards and resources", func() {
+		config := &gardencorev1beta1.KubeAPIServerConfig{
+			EncryptionConfig: &gardencorev1beta1.EncryptionConfig{
+				Resources: []string{
+					"*.stable.example.com",
+					"*.resources.gardener.cloud",
+					"configmaps",
+				},
+				ExcludedResources: []string{
+					"managedresources.resources.gardener.cloud",
+				},
+			},
+		}
+
+		list, err := GetResourcesForEncryption(fakeDiscoveryClient, config)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(list).To(ConsistOf(
+			schema.GroupVersionKind{Group: "", Version: "v1", Kind: "Secret"},
+			schema.GroupVersionKind{Group: "", Version: "v1", Kind: "ConfigMap"},
+			schema.GroupVersionKind{Group: "stable.example.com", Version: "v1", Kind: "CronTab"},
+			schema.GroupVersionKind{Group: "stable.example.com", Version: "v1", Kind: "CronBar"},
+		))
+	})
+
+	It("should return the correct GVK list for wildcard in excluded resources", func() {
+		config := &gardencorev1beta1.KubeAPIServerConfig{
+			EncryptionConfig: &gardencorev1beta1.EncryptionConfig{
+				Resources: []string{
+					"*.*",
+				},
+				ExcludedResources: []string{
+					"*.apps",
+					"*.stable.example.com",
+				},
+			},
+		}
+
+		list, err := GetResourcesForEncryption(fakeDiscoveryClient, config)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(list).To(ConsistOf(
+			schema.GroupVersionKind{Group: "", Version: "v1", Kind: "Secret"},
+			schema.GroupVersionKind{Group: "", Version: "v1", Kind: "ConfigMap"},
+			schema.GroupVersionKind{Group: "", Version: "v1", Kind: "Service"},
+			schema.GroupVersionKind{Group: "resources.gardener.cloud", Version: "v1alpha1", Kind: "ManagedResource"},
+		))
+	})
+})
+
+type fakeDiscoveryWithServerPreferredResources struct {
+	*fakediscovery.FakeDiscovery
+}
+
+func (c *fakeDiscoveryWithServerPreferredResources) ServerPreferredResources() ([]*metav1.APIResourceList, error) {
+	return []*metav1.APIResourceList{
+		{
+			GroupVersion: "v1",
+			APIResources: []metav1.APIResource{
+				{
+					Name:       "configmaps",
+					Namespaced: true,
+					Group:      corev1.SchemeGroupVersion.Group,
+					Version:    corev1.SchemeGroupVersion.Version,
+					Kind:       "ConfigMap",
+					Verbs:      metav1.Verbs{"delete", "deletecollection", "get", "list", "patch", "create", "update", "watch"},
+				},
+				{
+					Name:       "services",
+					Namespaced: true,
+					Group:      corev1.SchemeGroupVersion.Group,
+					Version:    corev1.SchemeGroupVersion.Version,
+					Kind:       "Service",
+					Verbs:      metav1.Verbs{"create", "delete", "deletecollection", "get", "list", "patch", "update", "watch"},
+					ShortNames: []string{"svc"},
+				},
+			},
+		},
+
+		{
+			GroupVersion: "apps/v1",
+			APIResources: []metav1.APIResource{
+				{
+					Name:         "daemonsets",
+					SingularName: "daemonset",
+					Namespaced:   true,
+					Group:        "",
+					Version:      "",
+					Kind:         "DaemonSet",
+					Verbs:        metav1.Verbs{"create", "delete", "deletecollection", "get", "list", "patch", "update", "watch"},
+					ShortNames:   []string{"ds"},
+				},
+				{
+					Name:         "deployments",
+					SingularName: "deployment",
+					Namespaced:   true,
+					Group:        "",
+					Version:      "",
+					Kind:         "Deployment",
+					Verbs:        metav1.Verbs{"create", "delete", "deletecollection", "get", "list", "patch", "update", "watch"},
+					ShortNames:   []string{"deploy"},
+				},
+				{
+					Name:         "statefulsets",
+					SingularName: "statefulset",
+					Namespaced:   true,
+					Group:        "",
+					Version:      "",
+					Kind:         "StatefulSet",
+					Verbs:        metav1.Verbs{"create", "delete", "deletecollection", "get", "list", "patch", "update", "watch"},
+					ShortNames:   []string{"sts"},
+				},
+			},
+		},
+		{
+			GroupVersion: "resources.gardener.cloud/v1alpha1",
+			APIResources: []metav1.APIResource{
+				{
+					Name:       "managedresources",
+					Namespaced: true,
+					Group:      "resources.gardener.cloud",
+					Version:    "v1alpha1",
+					Kind:       "ManagedResource",
+					Verbs:      metav1.Verbs{"delete", "deletecollection", "get", "list", "patch", "create", "update", "watch"},
+				},
+			},
+		},
+		{
+			GroupVersion: "stable.example.com/v1",
+			APIResources: []metav1.APIResource{
+				{
+					Name:         "crontabs",
+					SingularName: "crontab",
+					Namespaced:   true,
+					Group:        "stable.example.com",
+					Version:      "v1",
+					Kind:         "CronTab",
+					Verbs:        metav1.Verbs{"delete", "deletecollection", "get", "list", "patch", "create", "update", "watch"},
+				},
+				{
+					Name:         "cronbars",
+					SingularName: "cronbar",
+					Namespaced:   true,
+					Group:        "stable.example.com",
+					Version:      "v1",
+					Kind:         "CronBar",
+					Verbs:        metav1.Verbs{"delete", "deletecollection", "get", "list", "patch", "create", "update", "watch"},
+				},
+			},
+		},
+	}, nil
+}

@@ -120,7 +120,10 @@ func rewriteEncryptedData(
 			obj := o
 
 			taskFns = append(taskFns, func(ctx context.Context) error {
-				patch := client.StrategicMergeFrom(obj.DeepCopy())
+				// client.StrategicMergeFrom is not used here because CRDs don't support strategic-merge-patch.
+				// See https://github.com/kubernetes-sigs/controller-runtime/blob/a550f29c8781d1f7f9f19ab435ffac337b35a313/pkg/client/patch.go#L164-L173
+				// This should be okay since we don't modify any lists here.
+				patch := client.MergeFrom(obj.DeepCopy())
 				mutateObjectMeta(&obj.ObjectMeta)
 
 				// Wait until we are allowed by the limiter to not overload the API server with too many requests.

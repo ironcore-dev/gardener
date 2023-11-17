@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"time"
 
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -411,7 +410,12 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		rewriteSecretsAddLabel = g.Add(flow.Task{
 			Name: "Labeling secrets to encrypt them with new ETCD encryption key",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return secretsrotation.RewriteEncryptedDataAddLabel(ctx, o.Logger, o.ShootClientSet.Client(), o.SecretsManager, corev1.SchemeGroupVersion.WithKind("SecretList"))
+				encryptedGVKS, err := helper.GetResourcesForEncryption(o.ShootClientSet.Kubernetes().Discovery(), o.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer)
+				if err != nil {
+					return err
+				}
+
+				return secretsrotation.RewriteEncryptedDataAddLabel(ctx, o.Logger, o.ShootClientSet.Client(), o.SecretsManager, encryptedGVKS...)
 			}).RetryUntilTimeout(30*time.Second, 10*time.Minute),
 			SkipIf:       v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(o.Shoot.GetInfo().Status.Credentials) != gardencorev1beta1.RotationPreparing,
 			Dependencies: flow.NewTaskIDs(initializeShootClients),
@@ -427,7 +431,12 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		_ = g.Add(flow.Task{
 			Name: "Removing label from secrets after rotation of ETCD encryption key",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return secretsrotation.RewriteEncryptedDataRemoveLabel(ctx, o.Logger, o.SeedClientSet.Client(), o.ShootClientSet.Client(), o.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer, corev1.SchemeGroupVersion.WithKind("SecretList"))
+				encryptedGVKS, err := helper.GetResourcesForEncryption(o.ShootClientSet.Kubernetes().Discovery(), o.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer)
+				if err != nil {
+					return err
+				}
+
+				return secretsrotation.RewriteEncryptedDataRemoveLabel(ctx, o.Logger, o.SeedClientSet.Client(), o.ShootClientSet.Client(), o.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer, encryptedGVKS...)
 			}).RetryUntilTimeout(30*time.Second, 10*time.Minute),
 			SkipIf:       v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(o.Shoot.GetInfo().Status.Credentials) != gardencorev1beta1.RotationCompleting,
 			Dependencies: flow.NewTaskIDs(initializeShootClients),
