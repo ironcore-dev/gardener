@@ -4305,33 +4305,10 @@ triggered.</p>
 </em>
 </td>
 <td>
-<em>(Optional)</em>
 <p>Resources contains the list of resources that shall be encrypted in addition to secrets.
-Each item is a Kubernetes resource name in plural (resource or resource.group) or a wildcard (&rsquo;<em>.</em>&rsquo; or &lsquo;<em>.<group>&rsquo;)
-that should be encrypted. Note that wildcards are only supported for Kubernetes versions &gt;= v1.27 and configuring a CRD
-is only supported for  versions &gt;= 1.26. &lsquo;</em>.<group>&rsquo; and resource.group should not be used together.
-See <a href="https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/#understanding-the-encryption-at-rest-configuration">https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/#understanding-the-encryption-at-rest-configuration</a> for more details.
-Only additional resources can be added, but no resources can be removed. If resources are added, users need to issue
-update requests for all existing objects (e.g. empty patches) to encrypt the data in etcd.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>excludedResources</code></br>
-<em>
-[]string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>ExcludedResources contains the list of resources that shall be excluded from encryption.
-Each item is a Kubernetes resource name that should be excluded from the resource.
-This is useful when a wildcard (&rsquo;<em>.</em>&rsquo; or &lsquo;<em>.<group>&rsquo;)is used for the encryptionConfig.resources.
-Note that the resources can be added here only before the wildcard entry for the resource group is added in encryptionConfig.resources.
-Removal of items are allowed. If existing items are removed, users need to issue update requests for all existing objects (e.g. empty patches)
-to encrypt the data in etcd.
-Note that wildcards are only supported for Kubernetes versions &gt;= v1.27 and configuring a CRD
-is only supported for  versions &gt;= 1.26. &lsquo;</em>.<group>&rsquo; and resource.group should not be used together.
+Each item is a Kubernetes resource name in plural (resource or resource.group) that should be encrypted.
+Note that configuring a custom resource is only supported for  versions &gt;= 1.26.
+Wildcards are not supported for now.
 See <a href="https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/#understanding-the-encryption-at-rest-configuration">https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/#understanding-the-encryption-at-rest-configuration</a> for more details.</p>
 </td>
 </tr>

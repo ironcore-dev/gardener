@@ -1422,11 +1422,6 @@ func (in *EncryptionConfig) DeepCopyInto(out *EncryptionConfig) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
-	if in.ExcludedResources != nil {
-		in, out := &in.ExcludedResources, &out.ExcludedResources
-		*out = make([]string, len(*in))
-		copy(*out, *in)
-	}
 	return
 }
 

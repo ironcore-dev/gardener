@@ -94,32 +94,21 @@ func ReconcileSecretETCDEncryptionConfiguration(
 
 	keySecretOld, _ := secretsManager.Get(secretNameETCDEncryptionKey, secretsmanager.Old)
 
-	var encryptionConfiguration = &apiserverconfigv1.EncryptionConfiguration{Resources: []apiserverconfigv1.ResourceConfiguration{}}
-
-	if len(config.ExcludedResources) > 0 {
-		encryptionConfiguration.Resources = append(encryptionConfiguration.Resources, apiserverconfigv1.ResourceConfiguration{
-			Resources: config.ExcludedResources,
+	encryptionConfiguration := &apiserverconfigv1.EncryptionConfiguration{
+		Resources: []apiserverconfigv1.ResourceConfiguration{{
+			Resources: config.Resources,
 			Providers: []apiserverconfigv1.ProviderConfiguration{
+				{
+					AESCBC: &apiserverconfigv1.AESConfiguration{
+						Keys: etcdEncryptionAESKeys(keySecret, keySecretOld, config.EncryptWithCurrentKey),
+					},
+				},
 				{
 					Identity: &apiserverconfigv1.IdentityConfiguration{},
 				},
 			},
-		})
-	}
-
-	encryptionConfiguration.Resources = append(encryptionConfiguration.Resources, apiserverconfigv1.ResourceConfiguration{
-		Resources: config.Resources,
-		Providers: []apiserverconfigv1.ProviderConfiguration{
-			{
-				AESCBC: &apiserverconfigv1.AESConfiguration{
-					Keys: etcdEncryptionAESKeys(keySecret, keySecretOld, config.EncryptWithCurrentKey),
-				},
-			},
-			{
-				Identity: &apiserverconfigv1.IdentityConfiguration{},
-			},
 		},
-	})
+		}}
 
 	data, err := runtime.Encode(encryptionCodec, encryptionConfiguration)
 	if err != nil {

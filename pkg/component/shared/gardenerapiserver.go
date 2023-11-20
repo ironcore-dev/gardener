@@ -127,7 +127,7 @@ func DeployGardenerAPIServer(
 		gardencorev1beta1.Resource("controllerregistrations").String(),
 		gardencorev1beta1.Resource("internalsecrets").String(),
 		gardencorev1beta1.Resource("shootstates").String(),
-	}, nil)
+	})
 	if err != nil {
 		return err
 	}

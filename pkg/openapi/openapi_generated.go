@@ -2760,22 +2760,7 @@ func schema_pkg_apis_core_v1beta1_EncryptionConfig(ref common.ReferenceCallback)
 				Properties: map[string]spec.Schema{
 					"resources": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Resources contains the list of resources that shall be encrypted in addition to secrets. Each item is a Kubernetes resource name in plural (resource or resource.group) or a wildcard ('*.*' or '*.<group>') that should be encrypted. Note that wildcards are only supported for Kubernetes versions >= v1.27 and configuring a CRD is only supported for  versions >= 1.26. '*.<group>' and resource.group should not be used together. See https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/#understanding-the-encryption-at-rest-configuration for more details. Only additional resources can be added, but no resources can be removed. If resources are added, users need to issue update requests for all existing objects (e.g. empty patches) to encrypt the data in etcd.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Default: "",
-										Type:    []string{"string"},
-										Format:  "",
-									},
-								},
-							},
-						},
-					},
-					"excludedResources": {
-						SchemaProps: spec.SchemaProps{
-							Description: "ExcludedResources contains the list of resources that shall be excluded from encryption. Each item is a Kubernetes resource name that should be excluded from the resource. This is useful when a wildcard ('*.*' or '*.<group>')is used for the encryptionConfig.resources. Note that the resources can be added here only before the wildcard entry for the resource group is added in encryptionConfig.resources. Removal of items are allowed. If existing items are removed, users need to issue update requests for all existing objects (e.g. empty patches) to encrypt the data in etcd. Note that wildcards are only supported for Kubernetes versions >= v1.27 and configuring a CRD is only supported for  versions >= 1.26. '*.<group>' and resource.group should not be used together. See https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/#understanding-the-encryption-at-rest-configuration for more details.",
+							Description: "Resources contains the list of resources that shall be encrypted in addition to secrets. Each item is a Kubernetes resource name in plural (resource or resource.group) that should be encrypted. Note that configuring a custom resource is only supported for  versions >= 1.26. Wildcards are not supported for now. See https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/#understanding-the-encryption-at-rest-configuration for more details.",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
@@ -2789,6 +2774,7 @@ func schema_pkg_apis_core_v1beta1_EncryptionConfig(ref common.ReferenceCallback)
 						},
 					},
 				},
+				Required: []string{"resources"},
 			},
 		},
 	}

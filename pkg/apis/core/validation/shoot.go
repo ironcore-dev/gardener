@@ -562,35 +562,14 @@ func validateKubeAPIServerUpdate(newShoot, oldShoot *core.Shoot, fldPath *field.
 		allErrs               = field.ErrorList{}
 		oldEncryptedResources = sets.New[string]()
 		newEncryptedResources = sets.New[string]()
-		oldExcludedResources  = sets.New[string]()
-		newExcludedResources  = sets.New[string]()
 	)
 
 	if oldKubeAPIServer := oldShoot.Spec.Kubernetes.KubeAPIServer; oldKubeAPIServer != nil && oldKubeAPIServer.EncryptionConfig != nil {
 		oldEncryptedResources.Insert(oldKubeAPIServer.EncryptionConfig.Resources...)
-		oldExcludedResources.Insert(oldKubeAPIServer.EncryptionConfig.ExcludedResources...)
 	}
 
 	if newKubeAPIServer := newShoot.Spec.Kubernetes.KubeAPIServer; newKubeAPIServer != nil && newKubeAPIServer.EncryptionConfig != nil {
 		newEncryptedResources.Insert(newKubeAPIServer.EncryptionConfig.Resources...)
-		newExcludedResources.Insert(newKubeAPIServer.EncryptionConfig.ExcludedResources...)
-
-		for i, resource := range newKubeAPIServer.EncryptionConfig.ExcludedResources {
-			if oldExcludedResources.Has(resource) {
-				continue
-			}
-
-			if strings.HasPrefix(resource, "*.") && oldEncryptedResources.Has("*.*") {
-				allErrs = append(allErrs, field.Forbidden(fldPath.Child("encryptionConfig", "excludedResources").Index(i), "cannot exclude this resource since encryptionConfig.resources contains a wildcard item for all resource groups. ie;'*.*' which means the resource is already encrypted"))
-				continue
-			}
-
-			group := getGroup(resource)
-			if oldEncryptedResources.Has("*.*") || oldEncryptedResources.Has("*."+group) {
-				errorString := fmt.Sprintf("cannot exclude this resource since encryptionConfig.resources contains a wildcard item for this resource group. ie; either '*.*' or '*.%s' which means the resource is already encrypted", group)
-				allErrs = append(allErrs, field.Forbidden(fldPath.Child("encryptionConfig", "excludedResources").Index(i), errorString))
-			}
-		}
 	}
 
 	if newShoot.Status.Credentials != nil &&
@@ -600,9 +579,6 @@ func validateKubeAPIServerUpdate(newShoot, oldShoot *core.Shoot, fldPath *field.
 		errorString := fmt.Sprintf("resources cannot be changed when .status.credentials.rotation.etcdEncryptionKey.phase is not %q", string(core.RotationCompleted))
 		if !newEncryptedResources.Equal(oldEncryptedResources) {
 			allErrs = append(allErrs, field.Forbidden(fldPath.Child("encryptionConfig", "resources"), errorString))
-		}
-		if !newExcludedResources.Equal(oldExcludedResources) {
-			allErrs = append(allErrs, field.Forbidden(fldPath.Child("encryptionConfig", "excludedResources"), errorString))
 		}
 	}
 
@@ -1078,72 +1054,9 @@ func validateEncryptionConfig(encryptionConfig *core.EncryptionConfig, version s
 		return allErrs
 	}
 
-	allErrs = append(allErrs, validateEncryptionResources(encryptionConfig.Resources, fldPath.Child("encryptionConfig", "resources"))...)
-	allErrs = append(allErrs, validateEncryptionResources(encryptionConfig.ExcludedResources, fldPath.Child("encryptionConfig", "excludedResources"))...)
-
-	encryptedResources := sets.New(encryptionConfig.Resources...)
-	for i, resource := range encryptionConfig.ExcludedResources {
-		idxPath := fldPath.Child("encryptionConfig", "excludedResources").Index(i)
-		if encryptedResources.Has(resource) {
-			allErrs = append(allErrs, field.Forbidden(idxPath, "same resource cannot be mentioned in both resources and excludedResources"))
-		}
-
-		if resource == "*.*" {
-			allErrs = append(allErrs, field.Forbidden(idxPath, "all resources cannot be excluded since secrets are always encrypted"))
-		} else if resource == "*." {
-			allErrs = append(allErrs, field.Forbidden(idxPath, "core group cannot be excluded since secrets are always encrypted"))
-		}
-	}
-
-	k8sLess126, _ := versionutils.CheckVersionMeetsConstraint(version, "< 1.26")
-	if k8sLess126 {
-		if errList := checkIfCustomResource(encryptionConfig.Resources, fldPath.Child("encryptionConfig", "resources")); len(errList) > 0 {
-			allErrs = append(allErrs, errList...)
-		}
-		if errList := checkIfCustomResource(encryptionConfig.ExcludedResources, fldPath.Child("encryptionConfig", "excludedResources")); len(errList) > 0 {
-			allErrs = append(allErrs, errList...)
-		}
-	}
-
-	k8sLess127, _ := versionutils.CheckVersionMeetsConstraint(version, "< 1.27")
-	if k8sLess127 {
-		if errList := checkIfWildcard(encryptionConfig.Resources, fldPath.Child("encryptionConfig", "resources")); len(errList) > 0 {
-			allErrs = append(allErrs, errList...)
-		}
-		if errList := checkIfWildcard(encryptionConfig.ExcludedResources, fldPath.Child("encryptionConfig", "excludedResources")); len(errList) > 0 {
-			allErrs = append(allErrs, errList...)
-		}
-		// rest of the checks doesn't make sense if wildcards are not supported in the first place
-		return allErrs
-	}
-
-	if slices.Contains(encryptionConfig.Resources, "*.*") && len(encryptionConfig.Resources) != 1 {
-		allErrs = append(allErrs, field.Forbidden(fldPath.Child("encryptionConfig", "resources"), "using overlapping resources when '*.*' wildcard is used in the same resource list is not allowed as they will be masked"))
-	} else {
-		for i, resource := range encryptionConfig.Resources {
-			if strings.HasPrefix(resource, "*.") {
-				// only '*.*' can overlap with a wildcard resource and it's already checked before
-				continue
-			}
-
-			group := getGroup(resource)
-			if encryptedResources.Has("*." + group) {
-				allErrs = append(allErrs, field.Forbidden(fldPath.Child("encryptionConfig", "resources").Index(i), fmt.Sprintf("using overlapping resources such as %q and %q in the same resource list is not allowed as they will be masked", resource, "*."+group)))
-			}
-		}
-	}
-
-	return allErrs
-}
-
-func validateEncryptionResources(resources []string, fldPath *field.Path) field.ErrorList {
-	var (
-		seenResources = sets.New[string]()
-		allErrs       = field.ErrorList{}
-	)
-
-	for i, resource := range resources {
-		idxPath := fldPath.Index(i)
+	seenResources := sets.New[string]()
+	for i, resource := range encryptionConfig.Resources {
+		idxPath := fldPath.Child("encryptionConfig", "resources").Index(i)
 		if seenResources.Has(resource) {
 			allErrs = append(allErrs, field.Duplicate(idxPath, resource))
 		}
@@ -1151,6 +1064,23 @@ func validateEncryptionResources(resources []string, fldPath *field.Path) field.
 			allErrs = append(allErrs, field.Forbidden(idxPath, "secrets are always encrypted"))
 		}
 		seenResources.Insert(resource)
+	}
+
+	k8sLess126, _ := versionutils.CheckVersionMeetsConstraint(version, "< 1.26")
+	if k8sLess126 {
+		for i, resource := range encryptionConfig.Resources {
+			idxPath := fldPath.Child("encryptionConfig", "resources").Index(i)
+
+			if elements := strings.Split(resource, "."); len(elements) > 2 {
+				allErrs = append(allErrs, field.Invalid(idxPath, resource, "custom resources are only supported for Kubernetes versions >= 1.26"))
+			}
+		}
+	}
+
+	for _, resource := range encryptionConfig.Resources {
+		if strings.HasPrefix(resource, "*.") {
+			allErrs = append(allErrs, field.Invalid(fldPath, resource, "wildcards are not supported"))
+		}
 	}
 
 	return allErrs
@@ -2525,38 +2455,4 @@ func isShootReadyForRotationStart(lastOperation *core.LastOperation) bool {
 		return true
 	}
 	return lastOperation.Type == core.LastOperationTypeReconcile
-}
-
-func checkIfCustomResource(resources []string, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	for i, resource := range resources {
-		if elements := strings.Split(resource, "."); len(elements) > 2 {
-			allErrs = append(allErrs, field.Invalid(fldPath.Index(i), resource, "custom resources are only supported for Kubernetes versions >= 1.26"))
-		}
-	}
-
-	return allErrs
-}
-
-func checkIfWildcard(resources []string, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	for _, resource := range resources {
-		if strings.HasPrefix(resource, "*.") {
-			allErrs = append(allErrs, field.Invalid(fldPath, resource, "wildcards are only supported for Kubernetes versions >= 1.27"))
-		}
-	}
-
-	return allErrs
-}
-
-func getGroup(item string) string {
-	split := strings.Split(item, ".")
-
-	if len(split) == 1 {
-		return ""
-	}
-
-	return strings.Join(split[1:], ".")
 }

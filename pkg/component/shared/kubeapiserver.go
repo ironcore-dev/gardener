@@ -254,7 +254,6 @@ func DeployKubeAPIServer(
 		deploymentName,
 		etcdEncryptionKeyRotationPhase,
 		getResourcesForEncryption(apiServerConfig),
-		getExcludedResourcesForEncryption(apiServerConfig),
 	)
 	if err != nil {
 		return err
@@ -439,20 +438,6 @@ func getResourcesForEncryption(apiServerConfig *gardencorev1beta1.KubeAPIServerC
 
 	if apiServerConfig != nil && apiServerConfig.EncryptionConfig != nil {
 		resources.Insert(apiServerConfig.EncryptionConfig.Resources...)
-	}
-
-	if resources.Has("*.*") || resources.Has("*.") {
-		resources.Delete(corev1.Resource("secrets").String())
-	}
-
-	return sets.List(resources)
-}
-
-func getExcludedResourcesForEncryption(apiServerConfig *gardencorev1beta1.KubeAPIServerConfig) []string {
-	var resources = sets.New[string]()
-
-	if apiServerConfig != nil && apiServerConfig.EncryptionConfig != nil {
-		resources.Insert(apiServerConfig.EncryptionConfig.ExcludedResources...)
 	}
 
 	return sets.List(resources)

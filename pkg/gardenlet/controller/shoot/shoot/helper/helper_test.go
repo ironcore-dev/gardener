@@ -207,89 +207,9 @@ var _ = Describe("GetResourcesForEncryption", func() {
 			EncryptionConfig: &gardencorev1beta1.EncryptionConfig{
 				Resources: []string{
 					"crontabs.stable.example.com",
-					"*.resources.gardener.cloud",
-					"configmaps",
-				},
-			},
-		}
-
-		list, err := GetResourcesForEncryption(fakeDiscoveryClient, config)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(list).To(ConsistOf(
-			schema.GroupVersionKind{Group: "", Version: "v1", Kind: "Secret"},
-			schema.GroupVersionKind{Group: "", Version: "v1", Kind: "ConfigMap"},
-			schema.GroupVersionKind{Group: "stable.example.com", Version: "v1", Kind: "CronTab"},
-			schema.GroupVersionKind{Group: "resources.gardener.cloud", Version: "v1alpha1", Kind: "ManagedResource"},
-		))
-	})
-
-	It("should return the correct GVK list for wildcard matching all resources", func() {
-		config := &gardencorev1beta1.KubeAPIServerConfig{
-			EncryptionConfig: &gardencorev1beta1.EncryptionConfig{
-				Resources: []string{"*.*"},
-				ExcludedResources: []string{
-					"statefulsets.apps",
-					"crontabs.stable.example.com",
-				},
-			},
-		}
-
-		list, err := GetResourcesForEncryption(fakeDiscoveryClient, config)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(list).To(ConsistOf(
-			schema.GroupVersionKind{Group: "", Version: "v1", Kind: "Secret"},
-			schema.GroupVersionKind{Group: "", Version: "v1", Kind: "ConfigMap"},
-			schema.GroupVersionKind{Group: "", Version: "v1", Kind: "Service"},
-			schema.GroupVersionKind{Group: "stable.example.com", Version: "v1", Kind: "CronBar"},
-			schema.GroupVersionKind{Group: "resources.gardener.cloud", Version: "v1alpha1", Kind: "ManagedResource"},
-			schema.GroupVersionKind{Group: "apps", Version: "v1", Kind: "DaemonSet"},
-			schema.GroupVersionKind{Group: "apps", Version: "v1", Kind: "Deployment"},
-		))
-	})
-
-	It("should return the correct GVK list for wildcard matching core group", func() {
-		config := &gardencorev1beta1.KubeAPIServerConfig{
-			EncryptionConfig: &gardencorev1beta1.EncryptionConfig{
-				Resources:         []string{"*."},
-				ExcludedResources: []string{"services"},
-			},
-		}
-
-		list, err := GetResourcesForEncryption(fakeDiscoveryClient, config)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(list).To(ConsistOf(
-			schema.GroupVersionKind{Group: "", Version: "v1", Kind: "Secret"},
-			schema.GroupVersionKind{Group: "", Version: "v1", Kind: "ConfigMap"},
-		))
-	})
-
-	It("should return the correct GVK list for wildcard matching apps group", func() {
-		config := &gardencorev1beta1.KubeAPIServerConfig{
-			EncryptionConfig: &gardencorev1beta1.EncryptionConfig{
-				Resources:         []string{"*.apps"},
-				ExcludedResources: []string{"deployments.apps"},
-			},
-		}
-
-		list, err := GetResourcesForEncryption(fakeDiscoveryClient, config)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(list).To(ConsistOf(
-			schema.GroupVersionKind{Group: "", Version: "v1", Kind: "Secret"},
-			schema.GroupVersionKind{Group: "apps", Version: "v1", Kind: "DaemonSet"},
-			schema.GroupVersionKind{Group: "apps", Version: "v1", Kind: "StatefulSet"},
-		))
-	})
-
-	It("should return the correct GVK list for mix of wildcards and resources", func() {
-		config := &gardencorev1beta1.KubeAPIServerConfig{
-			EncryptionConfig: &gardencorev1beta1.EncryptionConfig{
-				Resources: []string{
-					"*.stable.example.com",
-					"*.resources.gardener.cloud",
-					"configmaps",
-				},
-				ExcludedResources: []string{
 					"managedresources.resources.gardener.cloud",
+					"configmaps",
+					"deployments.apps",
 				},
 			},
 		}
@@ -300,30 +220,8 @@ var _ = Describe("GetResourcesForEncryption", func() {
 			schema.GroupVersionKind{Group: "", Version: "v1", Kind: "Secret"},
 			schema.GroupVersionKind{Group: "", Version: "v1", Kind: "ConfigMap"},
 			schema.GroupVersionKind{Group: "stable.example.com", Version: "v1", Kind: "CronTab"},
-			schema.GroupVersionKind{Group: "stable.example.com", Version: "v1", Kind: "CronBar"},
-		))
-	})
-
-	It("should return the correct GVK list for wildcard in excluded resources", func() {
-		config := &gardencorev1beta1.KubeAPIServerConfig{
-			EncryptionConfig: &gardencorev1beta1.EncryptionConfig{
-				Resources: []string{
-					"*.*",
-				},
-				ExcludedResources: []string{
-					"*.apps",
-					"*.stable.example.com",
-				},
-			},
-		}
-
-		list, err := GetResourcesForEncryption(fakeDiscoveryClient, config)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(list).To(ConsistOf(
-			schema.GroupVersionKind{Group: "", Version: "v1", Kind: "Secret"},
-			schema.GroupVersionKind{Group: "", Version: "v1", Kind: "ConfigMap"},
-			schema.GroupVersionKind{Group: "", Version: "v1", Kind: "Service"},
 			schema.GroupVersionKind{Group: "resources.gardener.cloud", Version: "v1alpha1", Kind: "ManagedResource"},
+			schema.GroupVersionKind{Group: "apps", Version: "v1", Kind: "Deployment"},
 		))
 	})
 })
@@ -379,16 +277,6 @@ func (c *fakeDiscoveryWithServerPreferredResources) ServerPreferredResources() (
 					Kind:         "Deployment",
 					Verbs:        metav1.Verbs{"create", "delete", "deletecollection", "get", "list", "patch", "update", "watch"},
 					ShortNames:   []string{"deploy"},
-				},
-				{
-					Name:         "statefulsets",
-					SingularName: "statefulset",
-					Namespaced:   true,
-					Group:        "",
-					Version:      "",
-					Kind:         "StatefulSet",
-					Verbs:        metav1.Verbs{"create", "delete", "deletecollection", "get", "list", "patch", "update", "watch"},
-					ShortNames:   []string{"sts"},
 				},
 			},
 		},
