@@ -11339,6 +11339,19 @@ LastMaintenance
 <p>LastMaintenance holds information about the last maintenance operations on the Shoot.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>encryptedResources</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>EncryptedResources is a list of resources in the Shoot which are encrypted by the kube-apiserver.
+Secrets are always encrypted and are not part of the list.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.ShootTemplate">ShootTemplate

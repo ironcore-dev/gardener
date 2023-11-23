@@ -2888,6 +2888,11 @@ message ShootStatus {
   // LastMaintenance holds information about the last maintenance operations on the Shoot.
   // +optional
   optional LastMaintenance lastMaintenance = 17;
+
+  // EncryptedResources is a list of resources in the Shoot which are encrypted by the kube-apiserver.
+  // Secrets are always encrypted and are not part of the list.
+  // +optional
+  repeated string encryptedResources = 18;
 }
 
 // ShootTemplate is a template for creating a Shoot object.

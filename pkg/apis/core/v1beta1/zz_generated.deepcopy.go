@@ -4895,6 +4895,11 @@ func (in *ShootStatus) DeepCopyInto(out *ShootStatus) {
 		*out = new(LastMaintenance)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.EncryptedResources != nil {
+		in, out := &in.EncryptedResources, &out.EncryptedResources
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	return
 }
 

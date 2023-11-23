@@ -159,6 +159,9 @@ type ShootStatus struct {
 	Credentials *ShootCredentials
 	// LastMaintenance holds information about the last maintenance operations on the Shoot.
 	LastMaintenance *LastMaintenance
+	// EncryptedResources is a list of resources in the Shoot which are encrypted by the kube-apiserver.
+	// Secrets are always encrypted and are not part of the list.
+	EncryptedResources []string
 }
 
 // LastMaintenance holds information about a maintenance operation on the Shoot.

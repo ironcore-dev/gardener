@@ -5986,6 +5986,7 @@ func autoConvert_v1beta1_ShootStatus_To_core_ShootStatus(in *ShootStatus, out *c
 	out.Credentials = (*core.ShootCredentials)(unsafe.Pointer(in.Credentials))
 	out.LastHibernationTriggerTime = (*metav1.Time)(unsafe.Pointer(in.LastHibernationTriggerTime))
 	out.LastMaintenance = (*core.LastMaintenance)(unsafe.Pointer(in.LastMaintenance))
+	out.EncryptedResources = *(*[]string)(unsafe.Pointer(&in.EncryptedResources))
 	return nil
 }
 
@@ -6014,6 +6015,7 @@ func autoConvert_core_ShootStatus_To_v1beta1_ShootStatus(in *core.ShootStatus, o
 	out.MigrationStartTime = (*metav1.Time)(unsafe.Pointer(in.MigrationStartTime))
 	out.Credentials = (*ShootCredentials)(unsafe.Pointer(in.Credentials))
 	out.LastMaintenance = (*LastMaintenance)(unsafe.Pointer(in.LastMaintenance))
+	out.EncryptedResources = *(*[]string)(unsafe.Pointer(&in.EncryptedResources))
 	return nil
 }
 

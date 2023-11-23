@@ -8165,6 +8165,21 @@ func schema_pkg_apis_core_v1beta1_ShootStatus(ref common.ReferenceCallback) comm
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.LastMaintenance"),
 						},
 					},
+					"encryptedResources": {
+						SchemaProps: spec.SchemaProps{
+							Description: "EncryptedResources is a list of resources in the Shoot which are encrypted by the kube-apiserver. Secrets are always encrypted and are not part of the list.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
+						},
+					},
 				},
 				Required: []string{"gardener", "hibernated", "technicalID", "uid"},
 			},
