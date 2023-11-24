@@ -709,6 +709,17 @@ Credentials
 <p>Credentials contains information about the virtual garden cluster credentials.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>encryptedResources</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<p>EncryptedResources is a list of resources in the virtual garden which are encrypted by the virtual kube-apiserver.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="operator.gardener.cloud/v1alpha1.Gardener">Gardener

@@ -517,6 +517,8 @@ type GardenStatus struct {
 	// Credentials contains information about the virtual garden cluster credentials.
 	// +optional
 	Credentials *Credentials `json:"credentials,omitempty"`
+	// EncryptedResources is a list of resources in the virtual garden which are encrypted by the virtual kube-apiserver.
+	EncryptedResources []string `json:"encryptedResources,omitempty"`
 }
 
 // Credentials contains information about the virtual garden cluster credentials.
