@@ -24,6 +24,8 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	fakediscovery "k8s.io/client-go/discovery/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -176,4 +178,123 @@ var _ = Describe("ETCD", func() {
 			})
 		})
 	})
+
+	Describe("GetResourcesForRewrite", func() {
+		var fakeDiscoveryClient *fakeDiscoveryWithServerPreferredResources
+
+		BeforeEach(func() {
+			fakeDiscoveryClient = &fakeDiscoveryWithServerPreferredResources{}
+		})
+
+		It("should return the correct GVK list", func() {
+			resources := []string{
+				"crontabs.stable.example.com",
+				"managedresources.resources.gardener.cloud",
+				"configmaps",
+				"deployments.apps",
+			}
+
+			list, err := GetResourcesForRewrite(fakeDiscoveryClient, resources)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(list).To(ConsistOf(
+				schema.GroupVersionKind{Group: "", Version: "v1", Kind: "ConfigMap"},
+				schema.GroupVersionKind{Group: "stable.example.com", Version: "v1", Kind: "CronTab"},
+				schema.GroupVersionKind{Group: "resources.gardener.cloud", Version: "v1alpha1", Kind: "ManagedResource"},
+				schema.GroupVersionKind{Group: "apps", Version: "v1", Kind: "Deployment"},
+			))
+		})
+	})
 })
+
+type fakeDiscoveryWithServerPreferredResources struct {
+	*fakediscovery.FakeDiscovery
+}
+
+func (c *fakeDiscoveryWithServerPreferredResources) ServerPreferredResources() ([]*metav1.APIResourceList, error) {
+	return []*metav1.APIResourceList{
+		{
+			GroupVersion: "v1",
+			APIResources: []metav1.APIResource{
+				{
+					Name:       "configmaps",
+					Namespaced: true,
+					Group:      corev1.SchemeGroupVersion.Group,
+					Version:    corev1.SchemeGroupVersion.Version,
+					Kind:       "ConfigMap",
+					Verbs:      metav1.Verbs{"delete", "deletecollection", "get", "list", "patch", "create", "update", "watch"},
+				},
+				{
+					Name:       "services",
+					Namespaced: true,
+					Group:      corev1.SchemeGroupVersion.Group,
+					Version:    corev1.SchemeGroupVersion.Version,
+					Kind:       "Service",
+					Verbs:      metav1.Verbs{"create", "delete", "deletecollection", "get", "list", "patch", "update", "watch"},
+					ShortNames: []string{"svc"},
+				},
+			},
+		},
+
+		{
+			GroupVersion: "apps/v1",
+			APIResources: []metav1.APIResource{
+				{
+					Name:         "daemonsets",
+					SingularName: "daemonset",
+					Namespaced:   true,
+					Group:        "",
+					Version:      "",
+					Kind:         "DaemonSet",
+					Verbs:        metav1.Verbs{"create", "delete", "deletecollection", "get", "list", "patch", "update", "watch"},
+					ShortNames:   []string{"ds"},
+				},
+				{
+					Name:         "deployments",
+					SingularName: "deployment",
+					Namespaced:   true,
+					Group:        "",
+					Version:      "",
+					Kind:         "Deployment",
+					Verbs:        metav1.Verbs{"create", "delete", "deletecollection", "get", "list", "patch", "update", "watch"},
+					ShortNames:   []string{"deploy"},
+				},
+			},
+		},
+		{
+			GroupVersion: "resources.gardener.cloud/v1alpha1",
+			APIResources: []metav1.APIResource{
+				{
+					Name:       "managedresources",
+					Namespaced: true,
+					Group:      "resources.gardener.cloud",
+					Version:    "v1alpha1",
+					Kind:       "ManagedResource",
+					Verbs:      metav1.Verbs{"delete", "deletecollection", "get", "list", "patch", "create", "update", "watch"},
+				},
+			},
+		},
+		{
+			GroupVersion: "stable.example.com/v1",
+			APIResources: []metav1.APIResource{
+				{
+					Name:         "crontabs",
+					SingularName: "crontab",
+					Namespaced:   true,
+					Group:        "stable.example.com",
+					Version:      "v1",
+					Kind:         "CronTab",
+					Verbs:        metav1.Verbs{"delete", "deletecollection", "get", "list", "patch", "create", "update", "watch"},
+				},
+				{
+					Name:         "cronbars",
+					SingularName: "cronbar",
+					Namespaced:   true,
+					Group:        "stable.example.com",
+					Version:      "v1",
+					Kind:         "CronBar",
+					Verbs:        metav1.Verbs{"delete", "deletecollection", "get", "list", "patch", "create", "update", "watch"},
+				},
+			},
+		},
+	}, nil
+}

@@ -44,6 +44,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/apiserver"
 	"github.com/gardener/gardener/pkg/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/utils"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	imagevectorutils "github.com/gardener/gardener/pkg/utils/imagevector"
 	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsmanager "github.com/gardener/gardener/pkg/utils/secrets/manager"
@@ -212,6 +213,8 @@ func DeployKubeAPIServer(
 	sniConfig kubeapiserver.SNIConfig,
 	externalHostname string,
 	externalServer string,
+	resourcesToEncrypt []string,
+	encryptedResources []string,
 	etcdEncryptionKeyRotationPhase gardencorev1beta1.CredentialsRotationPhase,
 	serviceAccountKeyRotationPhase gardencorev1beta1.CredentialsRotationPhase,
 	wantScaleDown bool,
@@ -253,7 +256,8 @@ func DeployKubeAPIServer(
 		runtimeNamespace,
 		deploymentName,
 		etcdEncryptionKeyRotationPhase,
-		getResourcesForEncryption(apiServerConfig),
+		append(resourcesToEncrypt, sets.List(gardenerutils.DefaultResourcesForEncryption())...),
+		append(encryptedResources, sets.List(gardenerutils.DefaultResourcesForEncryption())...),
 	)
 	if err != nil {
 		return err
@@ -431,14 +435,4 @@ func computeKubeAPIServerServiceAccountConfig(
 	}
 
 	return out
-}
-
-func getResourcesForEncryption(apiServerConfig *gardencorev1beta1.KubeAPIServerConfig) []string {
-	var resources = sets.New[string](corev1.Resource("secrets").String())
-
-	if apiServerConfig != nil && apiServerConfig.EncryptionConfig != nil {
-		resources.Insert(apiServerConfig.EncryptionConfig.Resources...)
-	}
-
-	return sets.List(resources)
 }

@@ -26,6 +26,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/sets"
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
@@ -703,4 +704,36 @@ func GetShootConditionTypes(workerless bool) []gardencorev1beta1.ConditionType {
 	}
 
 	return append(shootConditionTypes, gardencorev1beta1.ShootSystemComponentsHealthy)
+}
+
+// DefaultGVKsForEncryption returns the list of GroupVersionKinds which are encrypted by default.
+func DefaultGVKsForEncryption() []schema.GroupVersionKind {
+	return []schema.GroupVersionKind{
+		corev1.SchemeGroupVersion.WithKind("Secret"),
+	}
+}
+
+// DefaultResourcesForEncryption returns the list of resources which are encrypted by default.
+func DefaultResourcesForEncryption() sets.Set[string] {
+	return sets.New(corev1.Resource("secrets").String())
+}
+
+// DefaultGardenerGVKsForEncryption returns the list of GroupVersionKinds served by Gardener API Server which are encrypted by default.
+func DefaultGardenerGVKsForEncryption() []schema.GroupVersionKind {
+	return []schema.GroupVersionKind{
+		gardencorev1beta1.SchemeGroupVersion.WithKind("ControllerDeployment"),
+		gardencorev1beta1.SchemeGroupVersion.WithKind("ControllerRegistration"),
+		gardencorev1beta1.SchemeGroupVersion.WithKind("InternalSecret"),
+		gardencorev1beta1.SchemeGroupVersion.WithKind("ShootState"),
+	}
+}
+
+// DefaultGardenerResourcesForEncryption returns the list of resources served by Gardener API Server which are encrypted by default.
+func DefaultGardenerResourcesForEncryption() sets.Set[string] {
+	return sets.New(
+		gardencorev1beta1.Resource("controllerdeployments").String(),
+		gardencorev1beta1.Resource("controllerregistrations").String(),
+		gardencorev1beta1.Resource("internalsecrets").String(),
+		gardencorev1beta1.Resource("shootstates").String(),
+	)
 }

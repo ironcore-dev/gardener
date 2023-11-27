@@ -104,6 +104,7 @@ type Shoot struct {
 	Networks                                *Networks
 	BackupEntryName                         string
 	CloudConfigExecutionMaxDelaySeconds     int
+	ResourcesToEncrypt                      []string
 
 	Components *Components
 }

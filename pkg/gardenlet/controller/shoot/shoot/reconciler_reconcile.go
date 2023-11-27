@@ -17,10 +17,12 @@ package shoot
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -36,6 +38,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/errors"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/gardener/secretsrotation"
 	"github.com/gardener/gardener/pkg/utils/gardener/shootstate"
 	"github.com/gardener/gardener/pkg/utils/gardener/tokenrequest"
@@ -407,36 +410,78 @@ func (r *Reconciler) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Fn:           flow.TaskFn(botanist.InitializeDesiredShootClients).RetryUntilTimeout(defaultInterval, 2*time.Minute),
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady, waitUntilControlPlaneExposureReady, waitUntilControlPlaneExposureDeleted, deployInternalDomainDNSRecord, deployGardenerAccess),
 		})
-		rewriteSecretsAddLabel = g.Add(flow.Task{
-			Name: "Labeling secrets to encrypt them with new ETCD encryption key",
+		rewriteResourcesAfterEncryption = g.Add(flow.Task{
+			Name: "Rewriting resources after change in encryption config",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				encryptedGVKS, err := helper.GetResourcesForEncryption(o.ShootClientSet.Kubernetes().Discovery(), o.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer)
+				var (
+					oldResources = sets.New(o.Shoot.GetInfo().Status.EncryptedResources...)
+					newResources = sets.New(o.Shoot.ResourcesToEncrypt...)
+
+					addedResources   = newResources.Difference(oldResources)
+					removedResources = oldResources.Difference(newResources)
+				)
+
+				encryptedGVKS, err := secretsrotation.GetResourcesForRewrite(o.ShootClientSet.Kubernetes().Discovery(), sets.List(addedResources.Union(removedResources)))
 				if err != nil {
 					return err
 				}
 
-				return secretsrotation.RewriteEncryptedDataAddLabel(ctx, o.Logger, o.ShootClientSet.Client(), o.SecretsManager, encryptedGVKS...)
+				return secretsrotation.RewriteDataAfterEncryption(ctx, o.Logger, o.ShootClientSet.Client(), encryptedGVKS...)
+			}).RetryUntilTimeout(30*time.Second, 10*time.Minute),
+			SkipIf:       reflect.DeepEqual(o.Shoot.ResourcesToEncrypt, o.Shoot.GetInfo().Status.EncryptedResources),
+			Dependencies: flow.NewTaskIDs(initializeShootClients),
+		})
+		rewriteResourcesAddLabel = g.Add(flow.Task{
+			Name: "Labeling resources to encrypt them with new ETCD encryption key",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				encryptedGVKS, err := secretsrotation.GetResourcesForRewrite(o.ShootClientSet.Kubernetes().Discovery(), o.Shoot.ResourcesToEncrypt)
+				if err != nil {
+					return err
+				}
+
+				return secretsrotation.RewriteEncryptedDataAddLabel(ctx, o.Logger, o.ShootClientSet.Client(), o.SecretsManager, append(encryptedGVKS, gardenerutils.DefaultGVKsForEncryption()...)...)
 			}).RetryUntilTimeout(30*time.Second, 10*time.Minute),
 			SkipIf:       v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(o.Shoot.GetInfo().Status.Credentials) != gardencorev1beta1.RotationPreparing,
 			Dependencies: flow.NewTaskIDs(initializeShootClients),
 		})
 		_ = g.Add(flow.Task{
-			Name: "Snapshotting ETCD after secrets were re-encrypted with new ETCD encryption key",
+			Name: "Snapshotting ETCD after resources were encrypted for the first time or removed from encryption or re-encrypted with new ETCD encryption key",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return secretsrotation.SnapshotETCDAfterRewritingEncryptedData(ctx, o.SeedClientSet.Client(), botanist.SnapshotEtcd, o.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer)
+				if err := secretsrotation.SnapshotETCDAfterRewritingEncryptedData(ctx, o.SeedClientSet.Client(), botanist.SnapshotEtcd, o.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer); err != nil {
+					return err
+				}
+
+				if !reflect.DeepEqual(o.Shoot.ResourcesToEncrypt, o.Shoot.GetInfo().Status.EncryptedResources) {
+					if err := secretsrotation.PatchAPIServerDeploymentMeta(ctx, o.SeedClientSet.Client(), o.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer, func(meta *metav1.PartialObjectMetadata) {
+						delete(meta.Annotations, secretsrotation.AnnotationKeyEtcdSnapshotted)
+					}); err != nil {
+						return err
+					}
+
+					if err := o.Shoot.UpdateInfoStatus(ctx, o.GardenClient, true, func(shoot *gardencorev1beta1.Shoot) error {
+						shoot.Status.EncryptedResources = o.Shoot.ResourcesToEncrypt
+						return nil
+					}); err != nil {
+						return err
+					}
+				}
+
+				return nil
 			}),
-			SkipIf:       !allowBackup || v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(o.Shoot.GetInfo().Status.Credentials) != gardencorev1beta1.RotationPreparing,
-			Dependencies: flow.NewTaskIDs(rewriteSecretsAddLabel),
+			SkipIf: !allowBackup ||
+				(v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(o.Shoot.GetInfo().Status.Credentials) != gardencorev1beta1.RotationPreparing &&
+					reflect.DeepEqual(o.Shoot.ResourcesToEncrypt, o.Shoot.GetInfo().Status.EncryptedResources)),
+			Dependencies: flow.NewTaskIDs(rewriteResourcesAddLabel, rewriteResourcesAfterEncryption),
 		})
 		_ = g.Add(flow.Task{
 			Name: "Removing label from secrets after rotation of ETCD encryption key",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				encryptedGVKS, err := helper.GetResourcesForEncryption(o.ShootClientSet.Kubernetes().Discovery(), o.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer)
+				encryptedGVKS, err := secretsrotation.GetResourcesForRewrite(o.ShootClientSet.Kubernetes().Discovery(), o.Shoot.ResourcesToEncrypt)
 				if err != nil {
 					return err
 				}
 
-				return secretsrotation.RewriteEncryptedDataRemoveLabel(ctx, o.Logger, o.SeedClientSet.Client(), o.ShootClientSet.Client(), o.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer, encryptedGVKS...)
+				return secretsrotation.RewriteEncryptedDataRemoveLabel(ctx, o.Logger, o.SeedClientSet.Client(), o.ShootClientSet.Client(), o.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer, append(encryptedGVKS, gardenerutils.DefaultGVKsForEncryption()...)...)
 			}).RetryUntilTimeout(30*time.Second, 10*time.Minute),
 			SkipIf:       v1beta1helper.GetShootETCDEncryptionKeyRotationPhase(o.Shoot.GetInfo().Status.Credentials) != gardencorev1beta1.RotationCompleting,
 			Dependencies: flow.NewTaskIDs(initializeShootClients),

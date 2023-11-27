@@ -22,6 +22,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -136,7 +137,8 @@ func computeAPIServerETCDEncryptionConfig(
 	runtimeNamespace string,
 	deploymentName string,
 	etcdEncryptionKeyRotationPhase gardencorev1beta1.CredentialsRotationPhase,
-	resources []string,
+	resourcesToEncrypt []string,
+	encryptedResources []string,
 ) (
 	apiserver.ETCDEncryptionConfig,
 	error,
@@ -144,7 +146,8 @@ func computeAPIServerETCDEncryptionConfig(
 	config := apiserver.ETCDEncryptionConfig{
 		RotationPhase:         etcdEncryptionKeyRotationPhase,
 		EncryptWithCurrentKey: true,
-		Resources:             resources,
+		ResourcesToEncrypt:    resourcesToEncrypt,
+		EncryptedResources:    encryptedResources,
 	}
 
 	if etcdEncryptionKeyRotationPhase == gardencorev1beta1.RotationPreparing {
@@ -207,6 +210,34 @@ func handleETCDEncryptionKeyRotation(
 		}); err != nil {
 			return err
 		}
+	}
+
+	return nil
+}
+
+// GetResourcesForEncryptionFromConfig returns the list of resources requiring encryption from the EncryptionConfig. Resources matching the filter function are skipped.
+func GetResourcesForEncryptionFromConfig(apiServerConfig *gardencorev1beta1.KubeAPIServerConfig, filterFunc func(string) bool) []string {
+	if apiServerConfig != nil && apiServerConfig.EncryptionConfig != nil {
+		return GetResourcesForEncryption(apiServerConfig.EncryptionConfig.Resources, filterFunc)
+	}
+
+	return nil
+}
+
+// GetResourcesForEncryption returns the list of resources after skipping the resources matching the filter function.
+func GetResourcesForEncryption(resources []string, filterFunc func(string) bool) []string {
+	out := sets.New[string]()
+
+	for _, res := range resources {
+		if filterFunc != nil && filterFunc(res) {
+			continue
+		}
+
+		out.Insert(res)
+	}
+
+	if out.Len() > 0 {
+		return sets.List(out)
 	}
 
 	return nil
