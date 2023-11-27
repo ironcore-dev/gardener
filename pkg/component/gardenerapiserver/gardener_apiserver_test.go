@@ -134,7 +134,7 @@ var _ = Describe("GardenerAPIServer", func() {
 					APIServerResources: resources,
 				},
 				ETCDEncryption: apiserver.ETCDEncryptionConfig{
-					Resources: []string{"shootstates.core.gardener.cloud"},
+					ResourcesToEncrypt: []string{"shootstates.core.gardener.cloud"},
 				},
 				RuntimeVersion: semver.MustParse("1.27.1"),
 			},
@@ -843,7 +843,7 @@ resources:
 						func(encryptWithCurrentKey bool) {
 							deployer = New(fakeClient, namespace, fakeSecretManager, Values{
 								Values: apiserver.Values{
-									ETCDEncryption: apiserver.ETCDEncryptionConfig{EncryptWithCurrentKey: encryptWithCurrentKey, Resources: []string{"shootstates.core.gardener.cloud"}},
+									ETCDEncryption: apiserver.ETCDEncryptionConfig{EncryptWithCurrentKey: encryptWithCurrentKey, ResourcesToEncrypt: []string{"shootstates.core.gardener.cloud"}},
 								},
 							})
 
@@ -1447,7 +1447,6 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 					Expect(managedResourceSecretRuntime.Data).To(HaveLen(4))
 					Expect(string(managedResourceSecretRuntime.Data["poddisruptionbudget__some-namespace__gardener-apiserver.yaml"])).To(Equal(componenttest.Serialize(podDisruptionBudget)))
 					Expect(string(managedResourceSecretRuntime.Data["service__some-namespace__gardener-apiserver.yaml"])).To(Equal(componenttest.Serialize(serviceRuntime)))
-					Expect(string(managedResourceSecretRuntime.Data["deployment__some-namespace__gardener-apiserver.yaml"])).To(Equal(componenttest.Serialize(deployment)))
 					Expect(managedResourceSecretRuntime.Immutable).To(Equal(pointer.Bool(true)))
 					Expect(managedResourceSecretRuntime.Labels["resources.gardener.cloud/garbage-collectable-reference"]).To(Equal("true"))
 

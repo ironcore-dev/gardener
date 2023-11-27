@@ -48,7 +48,7 @@ var _ = Describe("EncryptionConfiguration", func() {
 	)
 
 	BeforeEach(func() {
-		config = ETCDEncryptionConfig{Resources: []string{"foo"}}
+		config = ETCDEncryptionConfig{ResourcesToEncrypt: []string{"foo"}}
 
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		fakeSecretManager = fakesecretsmanager.New(fakeClient, namespace)
