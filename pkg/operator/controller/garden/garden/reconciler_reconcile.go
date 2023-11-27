@@ -17,6 +17,7 @@ package garden
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"strings"
 	"time"
 
@@ -25,6 +26,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/sets"
 	podsecurityadmissionapi "k8s.io/pod-security-admission/api"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -45,6 +47,7 @@ import (
 	"github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/gardener/secretsrotation"
@@ -113,16 +116,17 @@ func (r *Reconciler) reconcile(
 		return reconcile.Result{}, err
 	}
 
+	var apiServerConfig *gardencorev1beta1.KubeAPIServerConfig
+	if garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer != nil {
+		apiServerConfig = garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.KubeAPIServerConfig
+	}
+
 	var (
-		allowBackup          = garden.Spec.VirtualCluster.ETCD != nil && garden.Spec.VirtualCluster.ETCD.Main != nil && garden.Spec.VirtualCluster.ETCD.Main.Backup != nil
-		virtualClusterClient client.Client
-		encryptedGVKs        = []schema.GroupVersionKind{
-			corev1.SchemeGroupVersion.WithKind("SecretList"),
-			gardencorev1beta1.SchemeGroupVersion.WithKind("ControllerDeploymentList"),
-			gardencorev1beta1.SchemeGroupVersion.WithKind("ControllerRegistrationList"),
-			gardencorev1beta1.SchemeGroupVersion.WithKind("InternalSecretList"),
-			gardencorev1beta1.SchemeGroupVersion.WithKind("ShootStateList"),
-		}
+		allowBackup             = garden.Spec.VirtualCluster.ETCD != nil && garden.Spec.VirtualCluster.ETCD.Main != nil && garden.Spec.VirtualCluster.ETCD.Main.Backup != nil
+		virtualClusterClientSet kubernetes.Interface
+		virtualClusterClient    client.Client
+		defaultEncryptedGVKs    = append(gardenerutils.DefaultGardenerGVKsForEncryption(), gardenerutils.DefaultGVKsForEncryption()...)
+		resourcesToEncrypt      = shared.GetResourcesForEncryptionFromConfig(apiServerConfig, nil)
 
 		g                              = flow.NewGraph("Garden reconciliation")
 		generateGenericTokenKubeconfig = g.Add(flow.Task{
@@ -324,7 +328,7 @@ func (r *Reconciler) reconcile(
 		initializeVirtualClusterClient = g.Add(flow.Task{
 			Name: "Initializing connection to virtual garden cluster",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				virtualClusterClientSet, err := r.GardenClientMap.GetClient(ctx, keys.ForGarden(garden))
+				virtualClusterClientSet, err = r.GardenClientMap.GetClient(ctx, keys.ForGarden(garden))
 				if err != nil {
 					return err
 				}
@@ -367,10 +371,36 @@ func (r *Reconciler) reconcile(
 			SkipIf:       helper.GetCARotationPhase(garden.Status.Credentials) != gardencorev1beta1.RotationPreparing,
 			Dependencies: flow.NewTaskIDs(renewGardenletKubeconfigInAllSeeds),
 		})
-		rewriteSecretsAddLabel = g.Add(flow.Task{
+		rewriteResourcesAfterEncryption = g.Add(flow.Task{
+			Name: "Rewriting resources after change in encryption config",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				var (
+					oldResources = sets.New(garden.Status.EncryptedResources...)
+					newResources = sets.New(resourcesToEncrypt...)
+
+					addedResources   = newResources.Difference(oldResources)
+					removedResources = oldResources.Difference(newResources)
+				)
+
+				encryptedGVKS, err := secretsrotation.GetResourcesForRewrite(virtualClusterClientSet.Kubernetes().Discovery(), sets.List(addedResources.Union(removedResources)))
+				if err != nil {
+					return err
+				}
+
+				return secretsrotation.RewriteDataAfterEncryption(ctx, log, virtualClusterClient, encryptedGVKS...)
+			}).RetryUntilTimeout(30*time.Second, 10*time.Minute),
+			SkipIf:       reflect.DeepEqual(resourcesToEncrypt, garden.Status.EncryptedResources),
+			Dependencies: flow.NewTaskIDs(initializeVirtualClusterClient, waitUntilGardenerAPIServerReady),
+		})
+		rewriteResourcesAddLabel = g.Add(flow.Task{
 			Name: "Labeling encrypted resources to re-encrypt them with new ETCD encryption key",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return secretsrotation.RewriteEncryptedDataAddLabel(ctx, log, virtualClusterClient, secretsManager, encryptedGVKs...)
+				gvksFromEncryptionConfig, err := secretsrotation.GetResourcesForRewrite(virtualClusterClientSet.Kubernetes().Discovery(), resourcesToEncrypt)
+				if err != nil {
+					return err
+				}
+
+				return secretsrotation.RewriteEncryptedDataAddLabel(ctx, log, virtualClusterClient, secretsManager, append(gvksFromEncryptionConfig, defaultEncryptedGVKs...)...)
 			}).RetryUntilTimeout(30*time.Second, 10*time.Minute),
 			SkipIf:       helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials) != gardencorev1beta1.RotationPreparing,
 			Dependencies: flow.NewTaskIDs(initializeVirtualClusterClient, waitUntilGardenerAPIServerReady),
@@ -378,15 +408,40 @@ func (r *Reconciler) reconcile(
 		_ = g.Add(flow.Task{
 			Name: "Snapshotting ETCD after encrypted resources were re-encrypted with new ETCD encryption key",
 			Fn: func(ctx context.Context) error {
-				return secretsrotation.SnapshotETCDAfterRewritingEncryptedData(ctx, r.RuntimeClientSet.Client(), r.snapshotETCDFunc(secretsManager, c.etcdMain), r.GardenNamespace, namePrefix+v1beta1constants.DeploymentNameKubeAPIServer)
+				if err := secretsrotation.SnapshotETCDAfterRewritingEncryptedData(ctx, r.RuntimeClientSet.Client(), r.snapshotETCDFunc(secretsManager, c.etcdMain), r.GardenNamespace, namePrefix+v1beta1constants.DeploymentNameKubeAPIServer); err != nil {
+					return err
+				}
+
+				if !reflect.DeepEqual(resourcesToEncrypt, garden.Status.EncryptedResources) {
+					if err := secretsrotation.PatchAPIServerDeploymentMeta(ctx, r.RuntimeClientSet.Client(), r.GardenNamespace, namePrefix+v1beta1constants.DeploymentNameKubeAPIServer, func(meta *metav1.PartialObjectMetadata) {
+						delete(meta.Annotations, secretsrotation.AnnotationKeyEtcdSnapshotted)
+					}); err != nil {
+						return err
+					}
+
+					patch := client.MergeFrom(garden.DeepCopy())
+					garden.Status.EncryptedResources = resourcesToEncrypt
+					if err := r.RuntimeClientSet.Client().Status().Patch(ctx, garden, patch); err != nil {
+						return fmt.Errorf("error patching Garden status after snapshotting ETCD: %w", err)
+					}
+				}
+
+				return nil
 			},
-			SkipIf:       !allowBackup || helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials) != gardencorev1beta1.RotationPreparing,
-			Dependencies: flow.NewTaskIDs(rewriteSecretsAddLabel),
+			SkipIf: !allowBackup ||
+				(helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials) != gardencorev1beta1.RotationPreparing &&
+					reflect.DeepEqual(resourcesToEncrypt, garden.Status.EncryptedResources)),
+			Dependencies: flow.NewTaskIDs(rewriteResourcesAddLabel, rewriteResourcesAfterEncryption),
 		})
 		_ = g.Add(flow.Task{
 			Name: "Removing label from re-encrypted resources after rotation of ETCD encryption key",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return secretsrotation.RewriteEncryptedDataRemoveLabel(ctx, log, r.RuntimeClientSet.Client(), virtualClusterClient, r.GardenNamespace, namePrefix+v1beta1constants.DeploymentNameKubeAPIServer, encryptedGVKs...)
+				gvksFromEncryptionConfig, err := secretsrotation.GetResourcesForRewrite(virtualClusterClientSet.Kubernetes().Discovery(), resourcesToEncrypt)
+				if err != nil {
+					return err
+				}
+
+				return secretsrotation.RewriteEncryptedDataRemoveLabel(ctx, log, r.RuntimeClientSet.Client(), virtualClusterClient, r.GardenNamespace, namePrefix+v1beta1constants.DeploymentNameKubeAPIServer, append(gvksFromEncryptionConfig, defaultEncryptedGVKs...)...)
 			}).RetryUntilTimeout(30*time.Second, 10*time.Minute),
 			SkipIf:       helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials) != gardencorev1beta1.RotationCompleting,
 			Dependencies: flow.NewTaskIDs(initializeVirtualClusterClient, waitUntilGardenerAPIServerReady),
@@ -508,6 +563,8 @@ func (r *Reconciler) deployKubeAPIServerFunc(garden *operatorv1alpha1.Garden, ku
 			sniConfig,
 			gardenerutils.GetAPIServerDomain(garden.Spec.VirtualCluster.DNS.Domains[0]),
 			gardenerutils.GetAPIServerDomain(garden.Spec.VirtualCluster.DNS.Domains[0]),
+			shared.GetResourcesForEncryptionFromConfig(apiServerConfig, utils.IsServedByGardenerAPIServer),
+			shared.GetResourcesForEncryption(garden.Status.EncryptedResources, utils.IsServedByGardenerAPIServer),
 			helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials),
 			helper.GetServiceAccountKeyRotationPhase(garden.Status.Credentials),
 			false,
@@ -538,11 +595,21 @@ func (r *Reconciler) deployVirtualGardenGardenerResourceManager(secretsManager s
 
 func (r *Reconciler) deployGardenerAPIServerFunc(garden *operatorv1alpha1.Garden, gardenerAPIServer gardenerapiserver.Interface) flow.TaskFn {
 	return func(ctx context.Context) error {
+		var (
+			apiServerConfig            *gardencorev1beta1.KubeAPIServerConfig
+			filterNonGardenerResources = func(resource string) bool { return !utils.IsServedByGardenerAPIServer(resource) }
+		)
+		if garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer != nil {
+			apiServerConfig = garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.KubeAPIServerConfig
+		}
+
 		return shared.DeployGardenerAPIServer(
 			ctx,
 			r.RuntimeClientSet.Client(),
 			r.GardenNamespace,
 			gardenerAPIServer,
+			shared.GetResourcesForEncryptionFromConfig(apiServerConfig, filterNonGardenerResources),
+			shared.GetResourcesForEncryption(garden.Status.EncryptedResources, filterNonGardenerResources),
 			helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials),
 		)
 	}

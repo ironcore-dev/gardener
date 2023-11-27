@@ -26,6 +26,11 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
+	"github.com/gardener/gardener/pkg/apis/operations"
+	"github.com/gardener/gardener/pkg/apis/seedmanagement"
+	"github.com/gardener/gardener/pkg/apis/settings"
 )
 
 // ValueExists returns true or false, depending on whether the given string <value>
@@ -249,4 +254,20 @@ func ComputeOffsetIP(subnet *net.IPNet, offset int64) (net.IP, error) {
 	}
 
 	return nil, fmt.Errorf("computed IPv4 address %q is broadcast for subnet %q", ip, subnet)
+}
+
+// IsServedByGardenerAPIServer returns true if the passed resources is served by the Gardener API Server.
+func IsServedByGardenerAPIServer(resource string) bool {
+	for _, groupName := range []string{
+		gardencore.GroupName,
+		operations.GroupName,
+		settings.GroupName,
+		seedmanagement.GroupName,
+	} {
+		if strings.HasSuffix(resource, groupName) {
+			return true
+		}
+	}
+
+	return false
 }
