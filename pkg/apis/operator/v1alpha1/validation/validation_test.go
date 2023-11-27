@@ -60,6 +60,9 @@ var _ = Describe("Validation Tests", func() {
 						},
 						Kubernetes: operatorv1alpha1.Kubernetes{
 							Version: "1.26.3",
+							KubeAPIServer: &operatorv1alpha1.KubeAPIServerConfig{
+								KubeAPIServerConfig: &gardencorev1beta1.KubeAPIServerConfig{},
+							},
 						},
 						Networking: operatorv1alpha1.Networking{
 							Services: "10.4.0.0/16",
@@ -219,6 +222,9 @@ var _ = Describe("Validation Tests", func() {
 							},
 						},
 					},
+				}),
+				Entry("when spec encrypted resources and status encrypted resources are not equal", false, operatorv1alpha1.GardenStatus{
+					EncryptedResources: []string{"configmaps"},
 				}),
 			)
 
@@ -656,6 +662,9 @@ var _ = Describe("Validation Tests", func() {
 							},
 						},
 					},
+				}),
+				Entry("when spec encrypted resources and status encrypted resources are not equal", false, operatorv1alpha1.GardenStatus{
+					EncryptedResources: []string{"configmaps"},
 				}),
 			)
 
@@ -1416,6 +1425,58 @@ var _ = Describe("Validation Tests", func() {
 					})
 				})
 			})
+
+			Context("Kubernetes", func() {
+				Context("kubeAPIServer", func() {
+					Context("encryptionConfig", func() {
+						It("should deny specifying resources encrypted by default", func() {
+							garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.EncryptionConfig = &gardencorev1beta1.EncryptionConfig{
+								Resources: []string{
+									"secrets",
+									"secrets.",
+									"controllerdeployments.core.gardener.cloud",
+									"controllerregistrations.core.gardener.cloud",
+									"internalsecrets.core.gardener.cloud",
+									"shootstates.core.gardener.cloud",
+								},
+							}
+
+							Expect(ValidateGarden(garden)).To(ContainElements(
+								PointTo(MatchFields(IgnoreExtras, Fields{
+									"Type":   Equal(field.ErrorTypeForbidden),
+									"Field":  Equal("spec.virtualCluster.kubernetes.kubeAPIServer.encryptionConfig.resources[0]"),
+									"Detail": Equal("\"secrets\" are always encrypted"),
+								})),
+								PointTo(MatchFields(IgnoreExtras, Fields{
+									"Type":   Equal(field.ErrorTypeForbidden),
+									"Field":  Equal("spec.virtualCluster.kubernetes.kubeAPIServer.encryptionConfig.resources[1]"),
+									"Detail": Equal("\"secrets.\" are always encrypted"),
+								})),
+								PointTo(MatchFields(IgnoreExtras, Fields{
+									"Type":   Equal(field.ErrorTypeForbidden),
+									"Field":  Equal("spec.virtualCluster.kubernetes.kubeAPIServer.encryptionConfig.resources[2]"),
+									"Detail": Equal("\"controllerdeployments.core.gardener.cloud\" are always encrypted"),
+								})),
+								PointTo(MatchFields(IgnoreExtras, Fields{
+									"Type":   Equal(field.ErrorTypeForbidden),
+									"Field":  Equal("spec.virtualCluster.kubernetes.kubeAPIServer.encryptionConfig.resources[3]"),
+									"Detail": Equal("\"controllerregistrations.core.gardener.cloud\" are always encrypted"),
+								})),
+								PointTo(MatchFields(IgnoreExtras, Fields{
+									"Type":   Equal(field.ErrorTypeForbidden),
+									"Field":  Equal("spec.virtualCluster.kubernetes.kubeAPIServer.encryptionConfig.resources[4]"),
+									"Detail": Equal("\"internalsecrets.core.gardener.cloud\" are always encrypted"),
+								})),
+								PointTo(MatchFields(IgnoreExtras, Fields{
+									"Type":   Equal(field.ErrorTypeForbidden),
+									"Field":  Equal("spec.virtualCluster.kubernetes.kubeAPIServer.encryptionConfig.resources[5]"),
+									"Detail": Equal("\"shootstates.core.gardener.cloud\" are always encrypted"),
+								})),
+							))
+						})
+					})
+				})
+			})
 		})
 	})
 
@@ -1431,6 +1492,11 @@ var _ = Describe("Validation Tests", func() {
 					VirtualCluster: operatorv1alpha1.VirtualCluster{
 						Kubernetes: operatorv1alpha1.Kubernetes{
 							Version: "1.27.0",
+							KubeAPIServer: &operatorv1alpha1.KubeAPIServerConfig{
+								KubeAPIServerConfig: &gardencorev1beta1.KubeAPIServerConfig{
+									EncryptionConfig: &gardencorev1beta1.EncryptionConfig{},
+								},
+							},
 						},
 					},
 				},
@@ -1512,6 +1578,60 @@ var _ = Describe("Validation Tests", func() {
 						"Type":  Equal(field.ErrorTypeForbidden),
 						"Field": Equal("spec.virtualCluster.kubernetes.version"),
 					}))))
+				})
+
+				Context("kubeAPIServer", func() {
+					Context("encryptionConfig", func() {
+						It("should deny changing items during ETCD Encryption Key rotation", func() {
+							oldGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.EncryptionConfig = &gardencorev1beta1.EncryptionConfig{
+								Resources: []string{"configmaps", "deployments.apps"},
+							}
+							newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.EncryptionConfig.Resources = []string{"configmaps", "new.fancyresource.io"}
+							newGarden.Status.Credentials = &operatorv1alpha1.Credentials{
+								Rotation: &operatorv1alpha1.CredentialsRotation{
+									ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{
+										Phase: gardencorev1beta1.RotationPreparing,
+									},
+								},
+							}
+
+							Expect(ValidateGardenUpdate(oldGarden, newGarden)).To(ContainElement(
+								PointTo(MatchFields(IgnoreExtras, Fields{
+									"Type":   Equal(field.ErrorTypeForbidden),
+									"Field":  Equal("spec.virtualCluster.kubernetes.kubeAPIServer.encryptionConfig.resources"),
+									"Detail": Equal("resources cannot be changed when .status.credentials.rotation.etcdEncryptionKey.phase is not \"Completed\""),
+								})),
+							))
+						})
+
+						It("should allow changing items if ETCD Encryption Key rotation is in phase Completed or was never rotated", func() {
+							oldGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.EncryptionConfig = &gardencorev1beta1.EncryptionConfig{
+								Resources: []string{"resource.custom.io", "deployments.apps"},
+							}
+							newGarden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.EncryptionConfig.Resources = []string{"deployments.apps", "newresource.fancyresource.io"}
+							newGarden.Status.Credentials = nil
+
+							Expect(ValidateGardenUpdate(newGarden, oldGarden)).NotTo(ContainElement(
+								PointTo(MatchFields(IgnoreExtras, Fields{
+									"Field": Equal("spec.virtualCluster.kubernetes.kubeAPIServer.encryptionConfig.resources"),
+								})),
+							))
+
+							newGarden.Status.Credentials = &operatorv1alpha1.Credentials{
+								Rotation: &operatorv1alpha1.CredentialsRotation{
+									ETCDEncryptionKey: &gardencorev1beta1.ETCDEncryptionKeyRotation{
+										Phase: gardencorev1beta1.RotationCompleted,
+									},
+								},
+							}
+
+							Expect(ValidateGardenUpdate(newGarden, oldGarden)).NotTo(ContainElement(
+								PointTo(MatchFields(IgnoreExtras, Fields{
+									"Field": Equal("spec.virtualCluster.kubernetes.kubeAPIServer.encryptionConfig.resources"),
+								})),
+							))
+						})
+					})
 				})
 			})
 		})

@@ -89,6 +89,10 @@ var (
 		v1beta1constants.OperationRotateServiceAccountKeyStart,
 		v1beta1constants.OperationRotateServiceAccountKeyComplete,
 	)
+	forbiddenShootOperationsWhenEncryptionResourcesNotEqual = sets.New(
+		v1beta1constants.OperationRotateCredentialsStart,
+		v1beta1constants.OperationRotateETCDEncryptionKeyStart,
+	)
 	availableShootPurposes = sets.New(
 		string(core.ShootPurposeEvaluation),
 		string(core.ShootPurposeTesting),
@@ -162,7 +166,12 @@ func ValidateShootUpdate(newShoot, oldShoot *core.Shoot) field.ErrorList {
 	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&newShoot.ObjectMeta, &oldShoot.ObjectMeta, field.NewPath("metadata"))...)
 	allErrs = append(allErrs, ValidateShootObjectMetaUpdate(newShoot.ObjectMeta, oldShoot.ObjectMeta, field.NewPath("metadata"))...)
 	allErrs = append(allErrs, ValidateShootSpecUpdate(&newShoot.Spec, &oldShoot.Spec, newShoot.ObjectMeta, field.NewPath("spec"))...)
-	allErrs = append(allErrs, validateKubeAPIServerUpdate(newShoot, oldShoot, field.NewPath("spec", "kubernetes", "kubeAPIServer"))...)
+
+	var etcdEncryptionKeyRotation *core.ETCDEncryptionKeyRotation
+	if credentials := newShoot.Status.Credentials; credentials != nil && credentials.Rotation != nil {
+		etcdEncryptionKeyRotation = credentials.Rotation.ETCDEncryptionKey
+	}
+	allErrs = append(allErrs, ValidateEncryptionConfigUpdate(newShoot.Spec.Kubernetes.KubeAPIServer, oldShoot.Spec.Kubernetes.KubeAPIServer, etcdEncryptionKeyRotation, field.NewPath("spec", "kubernetes", "kubeAPIServer", "encryptionConfig"))...)
 	// validate version updates only to kubernetes 1.25
 	allErrs = append(allErrs, validateKubernetesVersionUpdate125(newShoot, oldShoot)...)
 	allErrs = append(allErrs, ValidateShoot(newShoot)...)
@@ -557,33 +566,26 @@ func ValidateTotalNodeCountWithPodCIDR(shoot *core.Shoot) field.ErrorList {
 	return allErrs
 }
 
-func validateKubeAPIServerUpdate(newShoot, oldShoot *core.Shoot, fldPath *field.Path) field.ErrorList {
+// ValidateEncryptionConfigUpdate validates the updates to the KubeAPIServer encryption configuration.
+func ValidateEncryptionConfigUpdate(newConfig, oldConfig *core.KubeAPIServerConfig, etcdEncryptionKeyRotation *core.ETCDEncryptionKeyRotation, fldPath *field.Path) field.ErrorList {
 	var (
 		allErrs               = field.ErrorList{}
 		oldEncryptedResources = sets.New[string]()
 		newEncryptedResources = sets.New[string]()
 	)
 
-	if oldKubeAPIServer := oldShoot.Spec.Kubernetes.KubeAPIServer; oldKubeAPIServer != nil && oldKubeAPIServer.EncryptionConfig != nil {
-		oldEncryptedResources.Insert(oldKubeAPIServer.EncryptionConfig.Resources...)
+	if oldConfig != nil && oldConfig.EncryptionConfig != nil {
+		oldEncryptedResources.Insert(oldConfig.EncryptionConfig.Resources...)
 	}
 
-	if newKubeAPIServer := newShoot.Spec.Kubernetes.KubeAPIServer; newKubeAPIServer != nil && newKubeAPIServer.EncryptionConfig != nil {
-		newEncryptedResources.Insert(newKubeAPIServer.EncryptionConfig.Resources...)
+	if newConfig != nil && newConfig.EncryptionConfig != nil {
+		newEncryptedResources.Insert(newConfig.EncryptionConfig.Resources...)
 	}
 
-	if newShoot.Status.Credentials != nil &&
-		newShoot.Status.Credentials.Rotation != nil &&
-		newShoot.Status.Credentials.Rotation.ETCDEncryptionKey != nil &&
-		newShoot.Status.Credentials.Rotation.ETCDEncryptionKey.Phase != core.RotationCompleted {
-		errorString := fmt.Sprintf("resources cannot be changed when .status.credentials.rotation.etcdEncryptionKey.phase is not %q", string(core.RotationCompleted))
+	if etcdEncryptionKeyRotation != nil && etcdEncryptionKeyRotation.Phase != core.RotationCompleted && etcdEncryptionKeyRotation.Phase != "" {
 		if !newEncryptedResources.Equal(oldEncryptedResources) {
-			allErrs = append(allErrs, field.Forbidden(fldPath.Child("encryptionConfig", "resources"), errorString))
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("resources"), fmt.Sprintf("resources cannot be changed when .status.credentials.rotation.etcdEncryptionKey.phase is not %q", string(core.RotationCompleted))))
 		}
-	}
-
-	if !newEncryptedResources.IsSuperset(oldEncryptedResources) {
-		allErrs = append(allErrs, field.Forbidden(fldPath.Child("encryptionConfig", "resources"), "existing items must not be removed"))
 	}
 
 	return allErrs
@@ -852,7 +854,7 @@ func validateKubernetes(kubernetes core.Kubernetes, networking *core.Networking,
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("enableStaticTokenKubeconfig"), kubernetes.EnableStaticTokenKubeconfig, "for Kubernetes versions >= 1.27, enableStaticTokenKubeconfig field cannot not be set to true, please see https://github.com/gardener/gardener/blob/master/docs/usage/shoot_access.md#static-token-kubeconfig"))
 	}
 
-	allErrs = append(allErrs, ValidateKubeAPIServer(kubernetes.KubeAPIServer, kubernetes.Version, workerless, fldPath.Child("kubeAPIServer"))...)
+	allErrs = append(allErrs, ValidateKubeAPIServer(kubernetes.KubeAPIServer, kubernetes.Version, workerless, gardenerutils.DefaultResourcesForEncryption(), fldPath.Child("kubeAPIServer"))...)
 	allErrs = append(allErrs, ValidateKubeControllerManager(kubernetes.KubeControllerManager, networking, kubernetes.Version, workerless, fldPath.Child("kubeControllerManager"))...)
 
 	if workerless {
@@ -1047,7 +1049,7 @@ func ValidateAPIServerRequests(requests *core.APIServerRequests, fldPath *field.
 	return allErrs
 }
 
-func validateEncryptionConfig(encryptionConfig *core.EncryptionConfig, version string, fldPath *field.Path) field.ErrorList {
+func validateEncryptionConfig(encryptionConfig *core.EncryptionConfig, version string, defaultEncryptedResources sets.Set[string], fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if encryptionConfig == nil {
@@ -1060,9 +1062,13 @@ func validateEncryptionConfig(encryptionConfig *core.EncryptionConfig, version s
 		if seenResources.Has(resource) {
 			allErrs = append(allErrs, field.Duplicate(idxPath, resource))
 		}
-		if resource == "secrets" || resource == "secrets." {
-			allErrs = append(allErrs, field.Forbidden(idxPath, "secrets are always encrypted"))
+
+		if defaultEncryptedResources.Has(resource) ||
+			// core resources can be mentioned with empty group (eg: secrets.)
+			defaultEncryptedResources.Has(strings.TrimSuffix(resource, ".")) {
+			allErrs = append(allErrs, field.Forbidden(idxPath, fmt.Sprintf("%q are always encrypted", resource)))
 		}
+
 		seenResources.Insert(resource)
 	}
 
@@ -1206,7 +1212,7 @@ func validateHibernationUpdate(new, old *core.Shoot) field.ErrorList {
 }
 
 // ValidateKubeAPIServer validates KubeAPIServerConfig.
-func ValidateKubeAPIServer(kubeAPIServer *core.KubeAPIServerConfig, version string, workerless bool, fldPath *field.Path) field.ErrorList {
+func ValidateKubeAPIServer(kubeAPIServer *core.KubeAPIServerConfig, version string, workerless bool, defaultEncryptedResources sets.Set[string], fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if kubeAPIServer == nil {
@@ -1287,7 +1293,7 @@ func ValidateKubeAPIServer(kubeAPIServer *core.KubeAPIServerConfig, version stri
 		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*defaultUnreachableTolerationSeconds), fldPath.Child("defaultUnreachableTolerationSeconds"))...)
 	}
 
-	allErrs = append(allErrs, validateEncryptionConfig(kubeAPIServer.EncryptionConfig, version, fldPath)...)
+	allErrs = append(allErrs, validateEncryptionConfig(kubeAPIServer.EncryptionConfig, version, defaultEncryptedResources, fldPath)...)
 
 	allErrs = append(allErrs, ValidateAPIServerRequests(kubeAPIServer.Requests, fldPath.Child("requests"))...)
 
@@ -2280,6 +2286,9 @@ func validateShootOperation(operation, maintenanceOperation string, shoot *core.
 		if helper.IsShootInHibernation(shoot) && forbiddenShootOperationsWhenHibernated.Has(operation) {
 			allErrs = append(allErrs, field.Forbidden(fldPathOp, "operation is not permitted when shoot is hibernated or is waking up"))
 		}
+		if !reflect.DeepEqual(getResourcesForEncryption(shoot.Spec.Kubernetes.KubeAPIServer), shoot.Status.EncryptedResources) && forbiddenShootOperationsWhenEncryptionResourcesNotEqual.Has(operation) {
+			allErrs = append(allErrs, field.Forbidden(fldPathOp, "operation is not permitted when spec.kubernetes.kubeAPIServer.encryptionConfig.resources and status.encryptedResources are not equal"))
+		}
 	}
 
 	if maintenanceOperation != "" {
@@ -2288,6 +2297,9 @@ func validateShootOperation(operation, maintenanceOperation string, shoot *core.
 		}
 		if helper.IsShootInHibernation(shoot) && forbiddenShootOperationsWhenHibernated.Has(maintenanceOperation) {
 			allErrs = append(allErrs, field.Forbidden(fldPathMaintOp, "operation is not permitted when shoot is hibernated or is waking up"))
+		}
+		if !reflect.DeepEqual(getResourcesForEncryption(shoot.Spec.Kubernetes.KubeAPIServer), shoot.Status.EncryptedResources) && forbiddenShootOperationsWhenEncryptionResourcesNotEqual.Has(maintenanceOperation) {
+			allErrs = append(allErrs, field.Forbidden(fldPathMaintOp, "operation is not permitted when spec.kubernetes.kubeAPIServer.encryptionConfig.resources and status.encryptedResources are not equal"))
 		}
 	}
 
@@ -2455,4 +2467,20 @@ func isShootReadyForRotationStart(lastOperation *core.LastOperation) bool {
 		return true
 	}
 	return lastOperation.Type == core.LastOperationTypeReconcile
+}
+
+func getResourcesForEncryption(apiServerConfig *core.KubeAPIServerConfig) []string {
+	resources := sets.New[string]()
+
+	if apiServerConfig != nil && apiServerConfig.EncryptionConfig != nil {
+		for _, res := range apiServerConfig.EncryptionConfig.Resources {
+			resources.Insert(res)
+		}
+	}
+
+	if resources.Len() > 0 {
+		sets.List(resources)
+	}
+
+	return nil
 }

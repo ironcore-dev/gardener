@@ -17,6 +17,7 @@ package validation
 import (
 	"fmt"
 	"net"
+	"reflect"
 
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	metav1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
@@ -37,8 +38,10 @@ import (
 	operatorv1alpha1 "github.com/gardener/gardener/pkg/apis/operator/v1alpha1"
 	operatorv1alpha1conversion "github.com/gardener/gardener/pkg/apis/operator/v1alpha1/conversion"
 	"github.com/gardener/gardener/pkg/apis/operator/v1alpha1/helper"
+	sharedcomponent "github.com/gardener/gardener/pkg/component/shared"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils"
+	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
 	"github.com/gardener/gardener/pkg/utils/validation/kubernetesversion"
 	plugin "github.com/gardener/gardener/plugin/pkg"
@@ -78,14 +81,19 @@ func ValidateGarden(garden *operatorv1alpha1.Garden) field.ErrorList {
 func ValidateGardenUpdate(oldGarden, newGarden *operatorv1alpha1.Garden) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, validateVirtualClusterUpdate(oldGarden.Spec.VirtualCluster, newGarden.Spec.VirtualCluster, field.NewPath("spec", "virtualCluster"))...)
+	allErrs = append(allErrs, validateVirtualClusterUpdate(oldGarden, newGarden)...)
 	allErrs = append(allErrs, ValidateGarden(newGarden)...)
 
 	return allErrs
 }
 
-func validateVirtualClusterUpdate(oldVirtualCluster, newVirtualCluster operatorv1alpha1.VirtualCluster, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
+func validateVirtualClusterUpdate(oldGarden, newGarden *operatorv1alpha1.Garden) field.ErrorList {
+	var (
+		allErrs           = field.ErrorList{}
+		oldVirtualCluster = oldGarden.Spec.VirtualCluster
+		newVirtualCluster = newGarden.Spec.VirtualCluster
+		fldPath           = field.NewPath("spec", "virtualCluster")
+	)
 
 	// First domain is immutable. Changing this would incompatibly change the service account issuer in the cluster, ref https://github.com/gardener/gardener/blob/17ff592e734131ef746560641bdcdec3bcfce0f1/pkg/component/kubeapiserver/deployment.go#L585C8-L585C8
 	// Note: We can consider supporting this scenario in the future but would need to re-issue all service account tokens during the reconcile run.
@@ -99,6 +107,31 @@ func validateVirtualClusterUpdate(oldVirtualCluster, newVirtualCluster operatorv
 	}
 
 	allErrs = append(allErrs, gardencorevalidation.ValidateKubernetesVersionUpdate(newVirtualCluster.Kubernetes.Version, oldVirtualCluster.Kubernetes.Version, fldPath.Child("kubernetes", "version"))...)
+
+	var (
+		oldKubeAPIServerConfig    = &gardencore.KubeAPIServerConfig{}
+		newKubeAPIServerConfig    = &gardencore.KubeAPIServerConfig{}
+		etcdEncryptionKeyRotation = &gardencore.ETCDEncryptionKeyRotation{}
+		kubeAPIServerFldPath      = fldPath.Child("kubernetes", "kubeAPIServer")
+	)
+
+	if oldKubeAPIServer := oldVirtualCluster.Kubernetes.KubeAPIServer; oldKubeAPIServer != nil && oldKubeAPIServer.KubeAPIServerConfig != nil {
+		if err := gardenCoreScheme.Convert(oldKubeAPIServer.KubeAPIServerConfig, oldKubeAPIServerConfig, nil); err != nil {
+			allErrs = append(allErrs, field.InternalError(kubeAPIServerFldPath, err))
+		}
+	}
+	if newKubeAPIServer := newVirtualCluster.Kubernetes.KubeAPIServer; newKubeAPIServer != nil && newKubeAPIServer.KubeAPIServerConfig != nil {
+		if err := gardenCoreScheme.Convert(newKubeAPIServer.KubeAPIServerConfig, newKubeAPIServerConfig, nil); err != nil {
+			allErrs = append(allErrs, field.InternalError(kubeAPIServerFldPath, err))
+		}
+	}
+	if credentials := newGarden.Status.Credentials; credentials != nil && credentials.Rotation != nil && credentials.Rotation.ETCDEncryptionKey != nil {
+		if err := gardenCoreScheme.Convert(credentials.Rotation.ETCDEncryptionKey, etcdEncryptionKeyRotation, nil); err != nil {
+			allErrs = append(allErrs, field.InternalError(field.NewPath("status", "credentials", "rotation", "etcdEncryptionKey"), err))
+		}
+	}
+
+	allErrs = append(allErrs, gardencorevalidation.ValidateEncryptionConfigUpdate(newKubeAPIServerConfig, oldKubeAPIServerConfig, etcdEncryptionKeyRotation, kubeAPIServerFldPath.Child("encryptionConfig"))...)
 
 	return allErrs
 }
@@ -145,7 +178,8 @@ func validateVirtualCluster(virtualCluster operatorv1alpha1.VirtualCluster, runt
 			allErrs = append(allErrs, field.InternalError(path, err))
 		}
 
-		allErrs = append(allErrs, gardencorevalidation.ValidateKubeAPIServer(coreKubeAPIServerConfig, virtualCluster.Kubernetes.Version, true, path)...)
+		defaultEncryptedResources := gardenerutils.DefaultGardenerResourcesForEncryption().Union(gardenerutils.DefaultResourcesForEncryption())
+		allErrs = append(allErrs, gardencorevalidation.ValidateKubeAPIServer(coreKubeAPIServerConfig, virtualCluster.Kubernetes.Version, true, defaultEncryptedResources, path)...)
 	}
 
 	if kubeControllerManager := virtualCluster.Kubernetes.KubeControllerManager; kubeControllerManager != nil && kubeControllerManager.KubeControllerManagerConfig != nil {
@@ -326,7 +360,14 @@ func validateOperation(operation string, garden *operatorv1alpha1.Garden, fldPat
 }
 
 func validateOperationContext(operation string, garden *operatorv1alpha1.Garden, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
+	var (
+		allErrs         = field.ErrorList{}
+		apiServerConfig *gardencorev1beta1.KubeAPIServerConfig
+	)
+
+	if garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer != nil {
+		apiServerConfig = garden.Spec.VirtualCluster.Kubernetes.KubeAPIServer.KubeAPIServerConfig
+	}
 
 	switch operation {
 	case v1beta1constants.OperationRotateCredentialsStart:
@@ -341,6 +382,9 @@ func validateOperationContext(operation string, garden *operatorv1alpha1.Garden,
 		}
 		if phase := helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials); len(phase) > 0 && phase != gardencorev1beta1.RotationCompleted {
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start rotation of all credentials if .status.credentials.rotation.etcdEncryptionKey.phase is not 'Completed'"))
+		}
+		if !reflect.DeepEqual(sharedcomponent.GetResourcesForEncryptionFromConfig(apiServerConfig, nil), garden.Status.EncryptedResources) {
+			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start rotation of all credentials when spec.virtualCluster.kubernetes.kubeAPIServer.encryptionConfig.resources and status.encryptedResources are not equal"))
 		}
 	case v1beta1constants.OperationRotateCredentialsComplete:
 		if garden.DeletionTimestamp != nil {
@@ -392,6 +436,9 @@ func validateOperationContext(operation string, garden *operatorv1alpha1.Garden,
 		}
 		if phase := helper.GetETCDEncryptionKeyRotationPhase(garden.Status.Credentials); len(phase) > 0 && phase != gardencorev1beta1.RotationCompleted {
 			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start ETCD encryption key rotation if .status.credentials.rotation.etcdEncryptionKey.phase is not 'Completed'"))
+		}
+		if !reflect.DeepEqual(sharedcomponent.GetResourcesForEncryptionFromConfig(apiServerConfig, nil), garden.Status.EncryptedResources) {
+			allErrs = append(allErrs, field.Forbidden(fldPath, "cannot start ETCD encryption key rotation when spec.virtualCluster.kubernetes.kubeAPIServer.encryptionConfig.resources and status.encryptedResources are not equal"))
 		}
 	case v1beta1constants.OperationRotateETCDEncryptionKeyComplete:
 		if garden.DeletionTimestamp != nil {

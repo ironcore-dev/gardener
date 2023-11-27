@@ -1826,12 +1826,12 @@ var _ = Describe("Shoot Validation Tests", func() {
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":   Equal(field.ErrorTypeForbidden),
 							"Field":  Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.resources[1]"),
-							"Detail": Equal("secrets are always encrypted"),
+							"Detail": Equal("\"secrets\" are always encrypted"),
 						})),
 						PointTo(MatchFields(IgnoreExtras, Fields{
 							"Type":   Equal(field.ErrorTypeForbidden),
 							"Field":  Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.resources[2]"),
-							"Detail": Equal("secrets are always encrypted"),
+							"Detail": Equal("\"secrets.\" are always encrypted"),
 						})),
 					))
 				})
@@ -1844,22 +1844,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 					newShoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig.Resources = append(newShoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig.Resources, "myfancystuff")
 
 					Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
-				})
-
-				It("should deny removing items in resources", func() {
-					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
-						Resources: []string{"configmaps", "serviceaccounts"},
-					}
-					newShoot := prepareShootForUpdate(shoot)
-					newShoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig.Resources = []string{"configmaps"}
-
-					Expect(ValidateShootUpdate(newShoot, shoot)).To(ConsistOf(
-						PointTo(MatchFields(IgnoreExtras, Fields{
-							"Type":   Equal(field.ErrorTypeForbidden),
-							"Field":  Equal("spec.kubernetes.kubeAPIServer.encryptionConfig.resources"),
-							"Detail": Equal("existing items must not be removed"),
-						})),
-					))
 				})
 
 				It("should deny using custom resource  for Kubernetes versions < 1.26", func() {
@@ -1878,22 +1862,12 @@ var _ = Describe("Shoot Validation Tests", func() {
 					))
 				})
 
-				It("should allow reordering resources", func() {
+				It("should deny changing items during ETCD Encryption Key rotation", func() {
 					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
-						Resources: []string{"configmaps", "pods"},
+						Resources: []string{"configmaps", "deployments.apps"},
 					}
 					newShoot := prepareShootForUpdate(shoot)
-					newShoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig.Resources = []string{"pods", "configmaps"}
-
-					Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
-				})
-
-				It("should deny adding items during ETCD Encryption Key rotation", func() {
-					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
-						Resources: []string{"configmaps"},
-					}
-					newShoot := prepareShootForUpdate(shoot)
-					newShoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig.Resources = append(newShoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig.Resources, "new.fancyresource.io")
+					newShoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig.Resources = []string{"configmaps", "new.fancyresource.io"}
 					newShoot.Status.Credentials = &core.ShootCredentials{
 						Rotation: &core.ShootCredentialsRotation{
 							ETCDEncryptionKey: &core.ETCDEncryptionKeyRotation{
@@ -1911,12 +1885,12 @@ var _ = Describe("Shoot Validation Tests", func() {
 					))
 				})
 
-				It("should allow adding items if ETCD Encryption Key rotation is in phase Completed or was never rotated", func() {
+				It("should allow changing items if ETCD Encryption Key rotation is in phase Completed or was never rotated", func() {
 					shoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig = &core.EncryptionConfig{
 						Resources: []string{"resource.custom.io", "deployments.apps"},
 					}
 					newShoot := prepareShootForUpdate(shoot)
-					newShoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig.Resources = append(newShoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig.Resources, "newresource.fancyresource.io")
+					newShoot.Spec.Kubernetes.KubeAPIServer.EncryptionConfig.Resources = []string{"deployments.apps", "newresource.fancyresource.io"}
 					newShoot.Status.Credentials = nil
 
 					Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
@@ -3941,6 +3915,12 @@ var _ = Describe("Shoot Validation Tests", func() {
 						},
 					},
 				}),
+				Entry("when shoot spec encrypted resources and status encrypted resources are not equal", false, core.ShootStatus{
+					LastOperation: &core.LastOperation{
+						Type: core.LastOperationTypeReconcile,
+					},
+					EncryptedResources: []string{"configmaps"},
+				}),
 			)
 
 			DescribeTable("completing rotation of all credentials",
@@ -4585,6 +4565,12 @@ var _ = Describe("Shoot Validation Tests", func() {
 							},
 						},
 					},
+				}),
+				Entry("when shoot spec encrypted resources and status encrypted resources are not equal", false, core.ShootStatus{
+					LastOperation: &core.LastOperation{
+						Type: core.LastOperationTypeReconcile,
+					},
+					EncryptedResources: []string{"configmaps"},
 				}),
 			)
 
