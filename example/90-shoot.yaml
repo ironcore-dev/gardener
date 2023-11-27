@@ -212,10 +212,7 @@ spec:
   #   encryptionConfig: # See: https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/
   #     resources: # secrets are always encrypted
   #     - configmaps
-  #     - customresource.fancyoperator.io
-  #     - '*.fancyresource.io'
-  #     excludedResources:
-  #     - random.fancyresource.io
+  #     - customresource.fancyoperator.io # require Kubernetes version >= 1.26
   # kubeControllerManager:
   #   nodeCIDRMaskSize: 24
   #   podEvictionTimeout: 2m0s

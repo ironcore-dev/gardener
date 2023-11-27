@@ -47,6 +47,21 @@ Using a runtime cluster without VPA is not supported.
 
 Refer to the [Topology-Aware Traffic Routing documentation](../operations/topology_aware_routing.md) as this document contains the documentation for the topology-aware routing setting for the garden runtime cluster.
 
+#### ETCD Encryption Config
+
+The `spec.virtualCluster.kubernetes.kubeAPIServer.encryptionConfig` field in the Garden API allows users to customize encryption configurations for the API server. It provides options to specify additional resources for encryption.
+
+- The resources field can be used to specify resources that should be encrypted in addition to secrets. The following resources are always encrypted:
+  - secrets
+  - controllerdeployments.core.gardener.cloud
+  - controllerregistrations.core.gardener.cloud
+  - internalsecrets.core.gardener.cloud
+  - shootstates.core.gardener.cloud
+- Adding a resource to this list will cause empty patch requests for all added resources to encrypt them in the etcd. See [Encrypting Confidential Data at Rest](https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data) for more details.
+- Removing a resource from this list will cause empty patch requests for all removed resources to decrypt and rewrite the resource as plain text. See [Decrypt Confidential Data that is Already Encrypted at Rest](https://kubernetes.io/docs/tasks/administer-cluster/decrypt-data/) for more details.
+
+> ℹ️ Note that configuring encryption for a custom resource is only supported for  versions >= 1.26.
+
 ## Controllers
 
 As of today, the `gardener-operator` only has two controllers which are now described in more detail.
