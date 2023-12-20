@@ -22,7 +22,6 @@ import (
 	"github.com/hashicorp/go-multierror"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
-	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -38,7 +37,6 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/apis/config"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	errorsutils "github.com/gardener/gardener/pkg/utils/errors"
-	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
 
 // Reconciler performs garbage collection.
@@ -101,10 +99,6 @@ func (r *Reconciler) Reconcile(reconcileCtx context.Context, _ reconcile.Request
 			resourcesv1alpha1.SchemeGroupVersion.WithKind("ManagedResourceList"),
 		}
 	)
-
-	if versionutils.ConstraintK8sLess125.Check(r.TargetKubernetesVersion) {
-		groupVersionKinds = append(groupVersionKinds, batchv1beta1.SchemeGroupVersion.WithKind("CronJobList"))
-	}
 
 	for _, gvk := range groupVersionKinds {
 		objList := &metav1.PartialObjectMetadataList{}
