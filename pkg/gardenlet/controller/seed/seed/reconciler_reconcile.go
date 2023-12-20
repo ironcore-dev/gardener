@@ -898,7 +898,6 @@ func waitForNginxIngressServiceAndGetDNSComponent(
 			nil,
 			v1beta1constants.PriorityClassNameSeedSystem600,
 			true,
-			true,
 			component.ClusterTypeSeed,
 			"",
 			v1beta1constants.SeedNginxIngressClass,
