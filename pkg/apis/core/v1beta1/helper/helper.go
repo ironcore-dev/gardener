@@ -1426,27 +1426,6 @@ func MutateShootETCDEncryptionKeyRotation(shoot *gardencorev1beta1.Shoot, f func
 	f(shoot.Status.Credentials.Rotation.ETCDEncryptionKey)
 }
 
-// IsPSPDisabled returns true if the PodSecurityPolicy plugin is explicitly disabled in the ShootSpec or the cluster version is >= 1.25.
-func IsPSPDisabled(shoot *gardencorev1beta1.Shoot) bool {
-	// we have disabled the policy/v1beta1/podsecuritypolicies API for workerless Shoots
-	if IsWorkerless(shoot) {
-		return true
-	}
-
-	if versionutils.ConstraintK8sGreaterEqual125.Check(semver.MustParse(shoot.Spec.Kubernetes.Version)) {
-		return true
-	}
-
-	if shoot.Spec.Kubernetes.KubeAPIServer != nil {
-		for _, plugin := range shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins {
-			if plugin.Name == "PodSecurityPolicy" && pointer.BoolDeref(plugin.Disabled, false) {
-				return true
-			}
-		}
-	}
-	return false
-}
-
 // IsFailureToleranceTypeZone returns true if failureToleranceType is zone else returns false.
 func IsFailureToleranceTypeZone(failureToleranceType *gardencorev1beta1.FailureToleranceType) bool {
 	return failureToleranceType != nil && *failureToleranceType == gardencorev1beta1.FailureToleranceTypeZone

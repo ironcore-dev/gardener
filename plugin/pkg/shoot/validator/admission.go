@@ -786,11 +786,6 @@ func performKubernetesDefaulting(newShoot, oldShoot *core.Shoot) {
 
 	if len(newShoot.Spec.Provider.Workers) > 0 {
 		// Error is ignored here because we cannot do anything meaningful with them - variables will default to `false`.
-		k8sLess125, _ := versionutils.CheckVersionMeetsConstraint(newShoot.Spec.Kubernetes.Version, "< 1.25")
-		if newShoot.Spec.Kubernetes.AllowPrivilegedContainers == nil && k8sLess125 && !isPSPDisabled(newShoot) {
-			newShoot.Spec.Kubernetes.AllowPrivilegedContainers = pointer.Bool(true)
-		}
-
 		k8sLess127, _ := versionutils.CheckVersionMeetsConstraint(newShoot.Spec.Kubernetes.Version, "< 1.27")
 		if newShoot.Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod == nil {
 			if k8sLess127 {
@@ -963,17 +958,6 @@ func (c *validationContext) validateProvider(a admission.Attributes) field.Error
 	}
 
 	return allErrs
-}
-
-func isPSPDisabled(shoot *core.Shoot) bool {
-	if shoot.Spec.Kubernetes.KubeAPIServer != nil {
-		for _, plugin := range shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins {
-			if plugin.Name == "PodSecurityPolicy" && pointer.BoolDeref(plugin.Disabled, false) {
-				return true
-			}
-		}
-	}
-	return false
 }
 
 func (c *validationContext) validateAPIVersionForRawExtensions() field.ErrorList {
