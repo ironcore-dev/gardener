@@ -143,8 +143,7 @@ var _ = Describe("GardenerAPIServer", func() {
 						{Name: "Priority"},
 						{Name: "NamespaceLifecycle", Config: &runtime.RawExtension{Raw: []byte("namespace-lifecycle-config")}},
 						{Name: "LimitRanger"},
-						{Name: "PodSecurityPolicy", Disabled: pointer.Bool(true)},
-						{Name: "ServiceAccount"},
+						{Name: "ServiceAccount", Disabled: pointer.Bool(true)},
 						{Name: "NodeRestriction"},
 						{Name: "DefaultStorageClass"},
 						{Name: "DefaultTolerationSeconds", Disabled: pointer.Bool(true)},
@@ -152,7 +151,7 @@ var _ = Describe("GardenerAPIServer", func() {
 					}
 
 					expectedDisabledPlugins = []gardencorev1beta1.AdmissionPlugin{
-						{Name: "PodSecurityPolicy", Disabled: pointer.Bool(true)},
+						{Name: "ServiceAccount", Disabled: pointer.Bool(true)},
 						{Name: "DefaultTolerationSeconds", Disabled: pointer.Bool(true)},
 					}
 				})
@@ -162,7 +161,6 @@ var _ = Describe("GardenerAPIServer", func() {
 						{Name: "Priority"},
 						{Name: "NamespaceLifecycle", Config: &runtime.RawExtension{Raw: []byte("namespace-lifecycle-config")}, Disabled: pointer.Bool(true)},
 						{Name: "LimitRanger"},
-						{Name: "PodSecurityPolicy"},
 						{Name: "ServiceAccount"},
 						{Name: "NodeRestriction"},
 						{Name: "DefaultStorageClass", Disabled: pointer.Bool(true)},
