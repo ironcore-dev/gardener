@@ -93,8 +93,8 @@ var _ = Describe("KubeAPIServer", func() {
 		BeforeEach(func() {
 			name = "bar"
 			objectMeta = metav1.ObjectMeta{Namespace: namespace, Name: name}
-			runtimeVersion = semver.MustParse("1.24.0")
-			targetVersion = semver.MustParse("1.24.0")
+			runtimeVersion = semver.MustParse("1.25.0")
+			targetVersion = semver.MustParse("1.25.0")
 			namePrefix = ""
 			serviceNetworkCIDR = "10.0.2.0/24"
 			autoscalingConfig = apiserver.AutoscalingConfig{}
@@ -116,7 +116,7 @@ var _ = Describe("KubeAPIServer", func() {
 				Data: map[string][]byte{"kubeconfig": []byte("kubeconfig-data")},
 			}
 
-			runtimeClientSet = fake.NewClientSetBuilder().WithClient(runtimeClient).WithVersion("1.26.0").Build()
+			runtimeClientSet = fake.NewClientSetBuilder().WithClient(runtimeClient).WithVersion(runtimeVersion.String()).Build()
 			resourceConfigClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
 			sm = fakesecretsmanager.New(runtimeClient, namespace)
 		})

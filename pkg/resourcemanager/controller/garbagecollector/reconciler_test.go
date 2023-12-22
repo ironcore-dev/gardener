@@ -58,7 +58,7 @@ var _ = Describe("Collector", func() {
 			Config:                  config.GarbageCollectorControllerConfig{SyncPeriod: &metav1.Duration{}},
 			Clock:                   fakeClock,
 			MinimumObjectLifetime:   &minimumObjectLifetime,
-			TargetKubernetesVersion: semver.MustParse("1.24.0"),
+			TargetKubernetesVersion: semver.MustParse("1.27.0"),
 		}
 	})
 
