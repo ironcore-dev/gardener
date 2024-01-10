@@ -394,7 +394,7 @@ func (g *garden) Start(ctx context.Context) error {
 		return err
 	}
 
-	// TODO(shafeeqes): Remove this in gardener v1.90
+	// TODO(shafeeqes): Remove this in gardener v1.92
 	log.Info("Cleaning up legacy 'shoot-core' ManagedResource")
 	if err := cleanupShootCoreManagedResource(ctx, g.mgr.GetClient()); err != nil {
 		return err
@@ -699,24 +699,19 @@ func getSecretsToRecreate(ctx context.Context, c client.Client, namespacesInDele
 }
 
 func cleanupShootCoreManagedResource(ctx context.Context, seedClient client.Client) error {
-	managedResourceList := &metav1.PartialObjectMetadataList{}
-	managedResourceList.SetGroupVersionKind(resourcesv1alpha1.SchemeGroupVersion.WithKind("ManagedResourceList"))
-	if err := seedClient.List(ctx, managedResourceList); err != nil {
-		if meta.IsNoMatchError(err) {
-			return nil
-		}
+	shootNamespaceList := &corev1.NamespaceList{}
+	if err := seedClient.List(ctx, shootNamespaceList, client.MatchingLabels{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot}); err != nil {
 		return err
 	}
 
 	var taskFns []flow.TaskFn
-	for _, managedResource := range managedResourceList.Items {
-		if managedResource.GetName() == "shoot-core" {
-			mr := managedResource
 
-			taskFns = append(taskFns, func(ctx context.Context) error {
-				return managedresources.DeleteForShoot(ctx, seedClient, mr.Namespace, "shoot-core")
-			})
-		}
+	for _, ns := range shootNamespaceList.Items {
+		namespace := ns
+
+		taskFns = append(taskFns, func(ctx context.Context) error {
+			return managedresources.DeleteForShoot(ctx, seedClient, namespace.Name, "shoot-core")
+		})
 	}
 
 	return flow.Parallel(taskFns...)(ctx)
