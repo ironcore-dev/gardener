@@ -17,7 +17,6 @@ package botanist
 import (
 	"context"
 
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/imagevector"
@@ -80,7 +79,7 @@ func (b *Botanist) DefaultVPNSeedServer() (vpnseedserver.Interface, error) {
 		Network: vpnseedserver.NetworkValues{
 			PodCIDR:     b.Shoot.Networks.Pods.String(),
 			ServiceCIDR: b.Shoot.Networks.Services.String(),
-			NodeCIDR:    pointer.StringDeref(b.Shoot.GetInfo().Spec.Networking.Nodes, ""),
+			NodeCIDR:    ptr.Deref(b.Shoot.GetInfo().Spec.Networking.Nodes, ""),
 			IPFamilies:  b.Shoot.GetInfo().Spec.Networking.IPFamilies,
 		},
 		Replicas:                             b.Shoot.GetReplicas(1),
