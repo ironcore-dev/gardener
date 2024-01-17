@@ -31,6 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
@@ -94,9 +95,9 @@ var _ = Describe("Logging", func() {
 				SeedClientSet:  k8sSeedClient,
 				Config: &config.GardenletConfiguration{
 					Logging: &config.Logging{
-						Enabled: pointer.Bool(true),
+						Enabled: ptr.To(true),
 						Vali: &config.Vali{
-							Enabled: pointer.Bool(true),
+							Enabled: ptr.To(true),
 						},
 						ShootNodeLogging: &config.ShootNodeLogging{
 							ShootPurposes: []gardencore.ShootPurpose{
@@ -104,7 +105,7 @@ var _ = Describe("Logging", func() {
 							},
 						},
 						ShootEventLogging: &config.ShootEventLogging{
-							Enabled: pointer.Bool(true),
+							Enabled: ptr.To(true),
 						},
 					},
 				},

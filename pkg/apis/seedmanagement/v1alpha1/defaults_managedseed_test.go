@@ -25,6 +25,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	. "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
@@ -77,7 +78,7 @@ var _ = Describe("Defaults", func() {
 							},
 						},
 						Bootstrap:       bootstrapPtr(BootstrapToken),
-						MergeWithParent: pointer.Bool(true),
+						MergeWithParent: ptr.To(true),
 					},
 				},
 			}))
@@ -138,7 +139,7 @@ var _ = Describe("Defaults", func() {
 							},
 						},
 						Bootstrap:       bootstrapPtr(BootstrapToken),
-						MergeWithParent: pointer.Bool(true),
+						MergeWithParent: ptr.To(true),
 					},
 				},
 			}))
@@ -159,7 +160,7 @@ var _ = Describe("Defaults", func() {
 				ReplicaCount:         pointer.Int32(2),
 				RevisionHistoryLimit: pointer.Int32(2),
 				Image:                &Image{},
-				VPA:                  pointer.Bool(true),
+				VPA:                  ptr.To(true),
 			}))
 		})
 	})

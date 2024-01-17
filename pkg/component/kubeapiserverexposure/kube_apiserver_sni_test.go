@@ -30,7 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/version"
 	fakediscovery "k8s.io/client-go/discovery/fake"
 	"k8s.io/client-go/testing"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -135,8 +135,8 @@ var _ = Describe("#SNI", func() {
 				Kind:               "Namespace",
 				Name:               namespace,
 				UID:                namespaceUID,
-				BlockOwnerDeletion: pointer.Bool(false),
-				Controller:         pointer.Bool(false),
+				BlockOwnerDeletion: ptr.To(false),
+				Controller:         ptr.To(false),
 			}},
 			ResourceVersion: "1",
 		}

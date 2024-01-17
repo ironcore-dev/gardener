@@ -29,7 +29,7 @@ import (
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"k8s.io/utils/clock"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -120,7 +120,7 @@ func (r *Reconciler) reconcileServiceAccount(ctx context.Context, secret *corev1
 	serviceAccount := r.getServiceAccountFromAnnotations(secret.Annotations)
 
 	if _, err := controllerutil.CreateOrUpdate(ctx, r.TargetClient, serviceAccount, func() error {
-		serviceAccount.AutomountServiceAccountToken = pointer.Bool(false)
+		serviceAccount.AutomountServiceAccountToken = ptr.To(false)
 		return nil
 	}); err != nil {
 		return nil, err

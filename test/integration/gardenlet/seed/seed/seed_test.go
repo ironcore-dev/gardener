@@ -30,6 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
@@ -146,7 +147,7 @@ var _ = Describe("Seed controller tests", func() {
 				},
 				ETCDConfig: &config.ETCDConfig{
 					BackupCompactionController: &config.BackupCompactionController{
-						EnableBackupCompaction: pointer.Bool(false),
+						EnableBackupCompaction: ptr.To(false),
 						EventsThreshold:        pointer.Int64(1),
 						Workers:                pointer.Int64(1),
 					},

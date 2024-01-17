@@ -41,6 +41,7 @@ import (
 	kubeinformers "k8s.io/client-go/informers"
 	kubecorev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/helper"
@@ -778,9 +779,9 @@ func performKubernetesDefaulting(newShoot, oldShoot *core.Shoot) {
 	if newShoot.Spec.Kubernetes.EnableStaticTokenKubeconfig == nil {
 		// Error is ignored here because we cannot do anything meaningful with it - variable will default to "false".
 		if k8sLessThan126, _ := versionutils.CheckVersionMeetsConstraint(newShoot.Spec.Kubernetes.Version, "< 1.26"); k8sLessThan126 {
-			newShoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = pointer.Bool(true)
+			newShoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = ptr.To(true)
 		} else {
-			newShoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = pointer.Bool(false)
+			newShoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = ptr.To(false)
 		}
 	}
 

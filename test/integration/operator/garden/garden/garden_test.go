@@ -34,6 +34,7 @@ import (
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
@@ -175,7 +176,7 @@ var _ = Describe("Garden controller tests", func() {
 							Annotations: loadBalancerServiceAnnotations,
 						},
 						VerticalPodAutoscaler: &operatorv1alpha1.SettingVerticalPodAutoscaler{
-							Enabled: pointer.Bool(true),
+							Enabled: ptr.To(true),
 						},
 					},
 				},
@@ -214,7 +215,7 @@ var _ = Describe("Garden controller tests", func() {
 							ETCDController:      &gardenletconfig.ETCDController{Workers: pointer.Int64(5)},
 							CustodianController: &gardenletconfig.CustodianController{Workers: pointer.Int64(5)},
 							BackupCompactionController: &gardenletconfig.BackupCompactionController{
-								EnableBackupCompaction: pointer.Bool(false),
+								EnableBackupCompaction: ptr.To(false),
 								Workers:                pointer.Int64(5),
 								EventsThreshold:        pointer.Int64(100),
 							},
@@ -425,7 +426,7 @@ var _ = Describe("Garden controller tests", func() {
 
 				patch := client.MergeFrom(etcd.DeepCopy())
 				etcd.Status.ObservedGeneration = &etcd.Generation
-				etcd.Status.Ready = pointer.Bool(true)
+				etcd.Status.Ready = ptr.To(true)
 				g.Expect(testClient.Status().Patch(ctx, etcd, patch)).To(Succeed(), "for "+etcd.Name)
 			}
 		}).Should(Succeed())

@@ -33,6 +33,7 @@ import (
 	"k8s.io/component-base/version"
 	"k8s.io/utils/clock"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -433,7 +434,7 @@ func injectGenericKubeconfig(obj runtime.Object, genericKubeconfigName, accessSe
 									Key:  secrets.DataKeyKubeconfig,
 									Path: secrets.DataKeyKubeconfig,
 								}},
-								Optional: pointer.Bool(false),
+								Optional: ptr.To(false),
 							},
 						},
 						{
@@ -445,7 +446,7 @@ func injectGenericKubeconfig(obj runtime.Object, genericKubeconfigName, accessSe
 									Key:  resourcesv1alpha1.DataKeyToken,
 									Path: resourcesv1alpha1.DataKeyToken,
 								}},
-								Optional: pointer.Bool(false),
+								Optional: ptr.To(false),
 							},
 						},
 					},
