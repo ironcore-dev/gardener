@@ -30,7 +30,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -126,7 +125,7 @@ var _ = Describe("Logging", func() {
 
 		botanist.Seed.SetInfo(&gardencorev1beta1.Seed{
 			Status: gardencorev1beta1.SeedStatus{
-				KubernetesVersion: pointer.String("1.2.3"),
+				KubernetesVersion: ptr.To("1.2.3"),
 			},
 		})
 

@@ -439,12 +439,12 @@ var _ = Describe("KubeAPIServer", func() {
 								Deploy: true,
 								ScaleUp: hvpav1alpha1.ScaleType{
 									UpdatePolicy: hvpav1alpha1.UpdatePolicy{
-										UpdateMode: pointer.String("Auto"),
+										UpdateMode: ptr.To("Auto"),
 									},
 								},
 								ScaleDown: hvpav1alpha1.ScaleType{
 									UpdatePolicy: hvpav1alpha1.UpdatePolicy{
-										UpdateMode: pointer.String("Auto"),
+										UpdateMode: ptr.To("Auto"),
 									},
 								},
 								Template: hvpav1alpha1.HpaTemplate{
@@ -465,16 +465,16 @@ var _ = Describe("KubeAPIServer", func() {
 								Deploy: true,
 								ScaleUp: hvpav1alpha1.ScaleType{
 									UpdatePolicy: hvpav1alpha1.UpdatePolicy{
-										UpdateMode: pointer.String("Auto"),
+										UpdateMode: ptr.To("Auto"),
 									},
-									StabilizationDuration: pointer.String("3m"),
+									StabilizationDuration: ptr.To("3m"),
 									MinChange: hvpav1alpha1.ScaleParams{
 										CPU: hvpav1alpha1.ChangeParams{
-											Value:      pointer.String("300m"),
+											Value:      ptr.To("300m"),
 											Percentage: pointer.Int32(80),
 										},
 										Memory: hvpav1alpha1.ChangeParams{
-											Value:      pointer.String("200M"),
+											Value:      ptr.To("200M"),
 											Percentage: pointer.Int32(80),
 										},
 									},
@@ -483,25 +483,25 @@ var _ = Describe("KubeAPIServer", func() {
 									UpdatePolicy: hvpav1alpha1.UpdatePolicy{
 										UpdateMode: &expectedScaleDownUpdateMode,
 									},
-									StabilizationDuration: pointer.String("15m"),
+									StabilizationDuration: ptr.To("15m"),
 									MinChange: hvpav1alpha1.ScaleParams{
 										CPU: hvpav1alpha1.ChangeParams{
-											Value:      pointer.String("300m"),
+											Value:      ptr.To("300m"),
 											Percentage: pointer.Int32(80),
 										},
 										Memory: hvpav1alpha1.ChangeParams{
-											Value:      pointer.String("200M"),
+											Value:      ptr.To("200M"),
 											Percentage: pointer.Int32(80),
 										},
 									},
 								},
 								LimitsRequestsGapScaleParams: hvpav1alpha1.ScaleParams{
 									CPU: hvpav1alpha1.ChangeParams{
-										Value:      pointer.String("1"),
+										Value:      ptr.To("1"),
 										Percentage: pointer.Int32(70),
 									},
 									Memory: hvpav1alpha1.ChangeParams{
-										Value:      pointer.String("1G"),
+										Value:      ptr.To("1G"),
 										Percentage: pointer.Int32(70),
 									},
 								},
@@ -1047,9 +1047,9 @@ resources:
 						},
 						Version: version,
 						SNI: SNIConfig{TLS: []TLSSNIConfig{
-							{SecretName: pointer.String("foo")},
+							{SecretName: ptr.To("foo")},
 							{Certificate: []byte("foo"), PrivateKey: []byte("bar")},
-							{SecretName: pointer.String("baz"), Certificate: []byte("foo"), PrivateKey: []byte("bar")},
+							{SecretName: ptr.To("baz"), Certificate: []byte("foo"), PrivateKey: []byte("bar")},
 						}},
 					})
 
@@ -2058,7 +2058,7 @@ rules:
 						HighAvailabilityNumberOfSeedServers:  2,
 						HighAvailabilityNumberOfShootClients: 3,
 						PodNetworkCIDR:                       "1.2.3.0/24",
-						NodeNetworkCIDR:                      pointer.String("7.8.9.0/24"),
+						NodeNetworkCIDR:                      ptr.To("7.8.9.0/24"),
 					},
 					Version: version,
 				}
@@ -3004,7 +3004,7 @@ rules:
 						Default: pointer.Int32(123),
 						Resources: []gardencorev1beta1.ResourceWatchCacheSize{
 							{Resource: "foo", CacheSize: 456},
-							{Resource: "bar", CacheSize: 789, APIGroup: pointer.String("baz")},
+							{Resource: "bar", CacheSize: 789, APIGroup: ptr.To("baz")},
 						},
 					}
 
@@ -3201,7 +3201,7 @@ rules:
 
 				It("should properly set the TLS SNI flag if necessary", func() {
 					values.SNI.TLS = []TLSSNIConfig{
-						{SecretName: pointer.String("existing-secret")},
+						{SecretName: ptr.To("existing-secret")},
 						{Certificate: []byte("foo"), PrivateKey: []byte("bar"), DomainPatterns: []string{"foo1.com", "*.foo2.com"}},
 					}
 					kapi = New(kubernetesInterface, namespace, sm, values)
@@ -3250,7 +3250,7 @@ rules:
 						Webhook: &apiserver.AuditWebhook{
 							Kubeconfig:   []byte("foo"),
 							BatchMaxSize: pointer.Int32(30),
-							Version:      pointer.String("audit.k8s.io/v1beta1"),
+							Version:      ptr.To("audit.k8s.io/v1beta1"),
 						},
 					}
 					kapi = New(kubernetesInterface, namespace, sm, values)
@@ -3284,7 +3284,7 @@ rules:
 					values.AuthenticationWebhook = &AuthenticationWebhook{
 						Kubeconfig: []byte("foo"),
 						CacheTTL:   pointer.Duration(30 * time.Second),
-						Version:    pointer.String("v1beta1"),
+						Version:    ptr.To("v1beta1"),
 					}
 					kapi = New(kubernetesInterface, namespace, sm, values)
 					deployAndRead()
@@ -3318,7 +3318,7 @@ rules:
 						Kubeconfig:           []byte("foo"),
 						CacheAuthorizedTTL:   pointer.Duration(13 * time.Second),
 						CacheUnauthorizedTTL: pointer.Duration(37 * time.Second),
-						Version:              pointer.String("v1alpha1"),
+						Version:              ptr.To("v1alpha1"),
 					}
 					kapi = New(kubernetesInterface, namespace, sm, values)
 					deployAndRead()
@@ -3398,7 +3398,7 @@ rules:
 							HighAvailabilityNumberOfSeedServers:  2,
 							HighAvailabilityNumberOfShootClients: 3,
 							PodNetworkCIDR:                       "1.2.3.0/24",
-							NodeNetworkCIDR:                      pointer.String("7.8.9.0/24"),
+							NodeNetworkCIDR:                      ptr.To("7.8.9.0/24"),
 						},
 						Version: version,
 					}
@@ -3424,7 +3424,7 @@ rules:
 							HighAvailabilityNumberOfSeedServers:  2,
 							HighAvailabilityNumberOfShootClients: 3,
 							PodNetworkCIDR:                       "1.2.3.0/24",
-							NodeNetworkCIDR:                      pointer.String("7.8.9.0/24"),
+							NodeNetworkCIDR:                      ptr.To("7.8.9.0/24"),
 						},
 						Version: version,
 					}

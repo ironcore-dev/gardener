@@ -181,12 +181,12 @@ var _ = Describe("Defaults", func() {
 		})
 
 		It("should default pull policy to Always if tag is latest", func() {
-			obj.Tag = pointer.String("latest")
+			obj.Tag = ptr.To("latest")
 
 			SetDefaults_Image(obj)
 
 			Expect(obj).To(Equal(&Image{
-				Tag:        pointer.String("latest"),
+				Tag:        ptr.To("latest"),
 				PullPolicy: pullPolicyPtr(corev1.PullAlways),
 			}))
 		})

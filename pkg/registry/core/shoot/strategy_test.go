@@ -22,7 +22,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -73,14 +72,14 @@ var _ = Describe("Strategy", func() {
 			BeforeEach(func() {
 				oldShoot = &core.Shoot{
 					Spec: core.ShootSpec{
-						SeedName: pointer.String("seed"),
+						SeedName: ptr.To("seed"),
 					},
 				}
 				newShoot = oldShoot.DeepCopy()
 			})
 
 			It("should not allow change of seedName on shoot spec update", func() {
-				newShoot.Spec.SeedName = pointer.String("new-seed")
+				newShoot.Spec.SeedName = ptr.To("new-seed")
 				shootregistry.NewStrategy(0).PrepareForUpdate(context.TODO(), newShoot, oldShoot)
 
 				Expect(newShoot.Spec.SeedName).To(Equal(oldShoot.Spec.SeedName))

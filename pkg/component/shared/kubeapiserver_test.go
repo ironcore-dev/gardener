@@ -104,8 +104,8 @@ var _ = Describe("KubeAPIServer", func() {
 			isWorkerless = false
 			staticTokenKubeconfigEnabled = nil
 			auditWebhookConfig = nil
-			authenticationWebhookConfig = &kubeapiserver.AuthenticationWebhook{Version: pointer.String("authn-version")}
-			authorizationWebhookConfig = &kubeapiserver.AuthorizationWebhook{Version: pointer.String("authnz-version")}
+			authenticationWebhookConfig = &kubeapiserver.AuthenticationWebhook{Version: ptr.To("authn-version")}
+			authorizationWebhookConfig = &kubeapiserver.AuthorizationWebhook{Version: ptr.To("authnz-version")}
 			resourcesToStoreInETCDEvents = []schema.GroupResource{{Resource: "foo", Group: "bar"}}
 			fastRollout = false
 
@@ -199,11 +199,11 @@ var _ = Describe("KubeAPIServer", func() {
 				),
 				Entry("default plugins with overrides",
 					[]gardencorev1beta1.AdmissionPlugin{
-						{Name: "NamespaceLifecycle", Config: &runtime.RawExtension{Raw: []byte("namespace-lifecycle-config")}, KubeconfigSecretName: pointer.String("secret-1")},
+						{Name: "NamespaceLifecycle", Config: &runtime.RawExtension{Raw: []byte("namespace-lifecycle-config")}, KubeconfigSecretName: ptr.To("secret-1")},
 					},
 					[]apiserver.AdmissionPluginConfig{
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "Priority"}},
-						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "NamespaceLifecycle", Config: &runtime.RawExtension{Raw: []byte("namespace-lifecycle-config")}, KubeconfigSecretName: pointer.String("secret-1")}, Kubeconfig: []byte("kubeconfig-data")},
+						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "NamespaceLifecycle", Config: &runtime.RawExtension{Raw: []byte("namespace-lifecycle-config")}, KubeconfigSecretName: ptr.To("secret-1")}, Kubeconfig: []byte("kubeconfig-data")},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "LimitRanger"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "PodSecurity"}},
 						{AdmissionPlugin: gardencorev1beta1.AdmissionPlugin{Name: "ServiceAccount"}},
@@ -685,11 +685,11 @@ exemptions:
 								},
 							},
 						}
-						auditWebhookConfig = &apiserver.AuditWebhook{Version: pointer.String("audit-version")}
+						auditWebhookConfig = &apiserver.AuditWebhook{Version: ptr.To("audit-version")}
 					},
 					&apiserver.AuditConfig{
 						Policy:  &policy,
-						Webhook: &apiserver.AuditWebhook{Version: pointer.String("audit-version")},
+						Webhook: &apiserver.AuditWebhook{Version: ptr.To("audit-version")},
 					},
 					Not(HaveOccurred()),
 				),
@@ -1359,7 +1359,7 @@ exemptions:
 					func() {
 						apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{
 							ServiceAccountConfig: &gardencorev1beta1.ServiceAccountConfig{
-								Issuer: pointer.String("issuer"),
+								Issuer: ptr.To("issuer"),
 							},
 						}
 					},
@@ -1389,7 +1389,7 @@ exemptions:
 					func() {
 						apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{
 							ServiceAccountConfig: &gardencorev1beta1.ServiceAccountConfig{
-								Issuer:          pointer.String("issuer"),
+								Issuer:          ptr.To("issuer"),
 								AcceptedIssuers: []string{"issuer1", "issuer2"},
 							},
 						}
@@ -1405,7 +1405,7 @@ exemptions:
 					func() {
 						apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{
 							ServiceAccountConfig: &gardencorev1beta1.ServiceAccountConfig{
-								Issuer:          pointer.String("issuer"),
+								Issuer:          ptr.To("issuer"),
 								AcceptedIssuers: []string{"https://" + externalHostname},
 							},
 						}
