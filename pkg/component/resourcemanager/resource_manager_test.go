@@ -43,7 +43,6 @@ import (
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -211,8 +210,8 @@ var _ = Describe("ResourceManager", func() {
 			v1beta1constants.LabelApp:   "gardener-resource-manager",
 		}
 
-		defaultNotReadyTolerationSeconds = pointer.Int64(60)
-		defaultUnreachableTolerationSeconds = pointer.Int64(120)
+		defaultNotReadyTolerationSeconds = ptr.To(int64(60))
+		defaultUnreachableTolerationSeconds = ptr.To(int64(120))
 
 		clusterRole = &rbacv1.ClusterRole{
 			ObjectMeta: metav1.ObjectMeta{
@@ -527,7 +526,7 @@ var _ = Describe("ResourceManager", func() {
 				},
 				Spec: appsv1.DeploymentSpec{
 					Replicas:             &replicas,
-					RevisionHistoryLimit: pointer.Int32(2),
+					RevisionHistoryLimit: ptr.To(int32(2)),
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
 							"app": "gardener-resource-manager",
@@ -643,11 +642,11 @@ var _ = Describe("ResourceManager", func() {
 									Name: "kube-api-access-gardener",
 									VolumeSource: corev1.VolumeSource{
 										Projected: &corev1.ProjectedVolumeSource{
-											DefaultMode: pointer.Int32(420),
+											DefaultMode: ptr.To(int32(420)),
 											Sources: []corev1.VolumeProjection{
 												{
 													ServiceAccountToken: &corev1.ServiceAccountTokenProjection{
-														ExpirationSeconds: pointer.Int64(43200),
+														ExpirationSeconds: ptr.To(int64(43200)),
 														Path:              "token",
 													},
 												},
@@ -682,7 +681,7 @@ var _ = Describe("ResourceManager", func() {
 									VolumeSource: corev1.VolumeSource{
 										Secret: &corev1.SecretVolumeSource{
 											SecretName:  secretNameServer,
-											DefaultMode: pointer.Int32(420),
+											DefaultMode: ptr.To(int32(420)),
 										},
 									},
 								},
@@ -701,7 +700,7 @@ var _ = Describe("ResourceManager", func() {
 									VolumeSource: corev1.VolumeSource{
 										Secret: &corev1.SecretVolumeSource{
 											SecretName:  "ca",
-											DefaultMode: pointer.Int32(420),
+											DefaultMode: ptr.To(int32(420)),
 										},
 									},
 								},
@@ -722,7 +721,7 @@ var _ = Describe("ResourceManager", func() {
 					VolumeSource: corev1.VolumeSource{
 						Secret: &corev1.SecretVolumeSource{
 							SecretName:  *secretNameBootstrapKubeconfig,
-							DefaultMode: pointer.Int32(420),
+							DefaultMode: ptr.To(int32(420)),
 						},
 					},
 				})
@@ -736,7 +735,7 @@ var _ = Describe("ResourceManager", func() {
 					Name: "kubeconfig",
 					VolumeSource: corev1.VolumeSource{
 						Projected: &corev1.ProjectedVolumeSource{
-							DefaultMode: pointer.Int32(420),
+							DefaultMode: ptr.To(int32(420)),
 							Sources: []corev1.VolumeProjection{
 								{
 									Secret: &corev1.SecretProjection{
@@ -793,7 +792,7 @@ var _ = Describe("ResourceManager", func() {
 					},
 					{
 						MaxSkew:           1,
-						MinDomains:        pointer.Int32(2),
+						MinDomains:        ptr.To(int32(2)),
 						TopologyKey:       "topology.kubernetes.io/zone",
 						WhenUnsatisfiable: "DoNotSchedule",
 						LabelSelector: &metav1.LabelSelector{
@@ -909,7 +908,7 @@ var _ = Describe("ResourceManager", func() {
 					FailurePolicy:           &failurePolicyFail,
 					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
-					TimeoutSeconds:          pointer.Int32(10),
+					TimeoutSeconds:          ptr.To(int32(10)),
 				},
 				{
 					Name: "high-availability-config.resources.gardener.cloud",
@@ -968,7 +967,7 @@ var _ = Describe("ResourceManager", func() {
 					FailurePolicy:           &failurePolicyFail,
 					MatchPolicy:             &matchPolicyEquivalent,
 					SideEffects:             &sideEffect,
-					TimeoutSeconds:          pointer.Int32(10),
+					TimeoutSeconds:          ptr.To(int32(10)),
 				},
 				{
 					Name: "seccomp-profile.resources.gardener.cloud",
@@ -1011,7 +1010,7 @@ var _ = Describe("ResourceManager", func() {
 					FailurePolicy:           &failurePolicyFail,
 					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
-					TimeoutSeconds:          pointer.Int32(10),
+					TimeoutSeconds:          ptr.To(int32(10)),
 				},
 				{
 					Name: "kubernetes-service-host.resources.gardener.cloud",
@@ -1051,7 +1050,7 @@ var _ = Describe("ResourceManager", func() {
 					FailurePolicy:           &failurePolicyIgnore,
 					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
-					TimeoutSeconds:          pointer.Int32(2),
+					TimeoutSeconds:          ptr.To(int32(2)),
 				},
 				{
 					Name: "endpoint-slice-hints.resources.gardener.cloud",
@@ -1086,7 +1085,7 @@ var _ = Describe("ResourceManager", func() {
 					FailurePolicy:           &failurePolicyFail,
 					MatchPolicy:             &matchPolicyEquivalent,
 					SideEffects:             &sideEffect,
-					TimeoutSeconds:          pointer.Int32(10),
+					TimeoutSeconds:          ptr.To(int32(10)),
 				},
 				{
 					Name: "pod-topology-spread-constraints.resources.gardener.cloud",
@@ -1129,7 +1128,7 @@ var _ = Describe("ResourceManager", func() {
 					FailurePolicy:           &failurePolicyFail,
 					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
-					TimeoutSeconds:          pointer.Int32(10),
+					TimeoutSeconds:          ptr.To(int32(10)),
 				},
 			},
 		}
@@ -1403,7 +1402,7 @@ subjects:
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
 					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
-					TimeoutSeconds:          pointer.Int32(10),
+					TimeoutSeconds:          ptr.To(int32(10)),
 				},
 				{
 					Name: "cr-deletion-protection.resources.gardener.cloud",
@@ -1451,7 +1450,7 @@ subjects:
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
 					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
-					TimeoutSeconds:          pointer.Int32(10),
+					TimeoutSeconds:          ptr.To(int32(10)),
 				},
 				{
 					Name: "validation.extensions.backupbuckets.resources.gardener.cloud",
@@ -1477,7 +1476,7 @@ subjects:
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
 					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
-					TimeoutSeconds:          pointer.Int32(10),
+					TimeoutSeconds:          ptr.To(int32(10)),
 				},
 				{
 					Name: "validation.extensions.backupentries.resources.gardener.cloud",
@@ -1503,7 +1502,7 @@ subjects:
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
 					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
-					TimeoutSeconds:          pointer.Int32(10),
+					TimeoutSeconds:          ptr.To(int32(10)),
 				},
 				{
 					Name: "validation.extensions.bastions.resources.gardener.cloud",
@@ -1529,7 +1528,7 @@ subjects:
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
 					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
-					TimeoutSeconds:          pointer.Int32(10),
+					TimeoutSeconds:          ptr.To(int32(10)),
 				},
 				{
 					Name: "validation.extensions.containerruntimes.resources.gardener.cloud",
@@ -1555,7 +1554,7 @@ subjects:
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
 					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
-					TimeoutSeconds:          pointer.Int32(10),
+					TimeoutSeconds:          ptr.To(int32(10)),
 				},
 				{
 					Name: "validation.extensions.controlplanes.resources.gardener.cloud",
@@ -1581,7 +1580,7 @@ subjects:
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
 					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
-					TimeoutSeconds:          pointer.Int32(10),
+					TimeoutSeconds:          ptr.To(int32(10)),
 				},
 				{
 					Name: "validation.extensions.dnsrecords.resources.gardener.cloud",
@@ -1607,7 +1606,7 @@ subjects:
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
 					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
-					TimeoutSeconds:          pointer.Int32(10),
+					TimeoutSeconds:          ptr.To(int32(10)),
 				},
 				{
 					Name: "validation.extensions.etcds.resources.gardener.cloud",
@@ -1633,7 +1632,7 @@ subjects:
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
 					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
-					TimeoutSeconds:          pointer.Int32(10),
+					TimeoutSeconds:          ptr.To(int32(10)),
 				},
 				{
 					Name: "validation.extensions.extensions.resources.gardener.cloud",
@@ -1659,7 +1658,7 @@ subjects:
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
 					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
-					TimeoutSeconds:          pointer.Int32(10),
+					TimeoutSeconds:          ptr.To(int32(10)),
 				},
 				{
 					Name: "validation.extensions.infrastructures.resources.gardener.cloud",
@@ -1685,7 +1684,7 @@ subjects:
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
 					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
-					TimeoutSeconds:          pointer.Int32(10),
+					TimeoutSeconds:          ptr.To(int32(10)),
 				},
 				{
 					Name: "validation.extensions.networks.resources.gardener.cloud",
@@ -1711,7 +1710,7 @@ subjects:
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
 					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
-					TimeoutSeconds:          pointer.Int32(10),
+					TimeoutSeconds:          ptr.To(int32(10)),
 				},
 				{
 					Name: "validation.extensions.operatingsystemconfigs.resources.gardener.cloud",
@@ -1737,7 +1736,7 @@ subjects:
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
 					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
-					TimeoutSeconds:          pointer.Int32(10),
+					TimeoutSeconds:          ptr.To(int32(10)),
 				},
 				{
 					Name: "validation.extensions.workers.resources.gardener.cloud",
@@ -1763,7 +1762,7 @@ subjects:
 					AdmissionReviewVersions: []string{"v1beta1", "v1"},
 					MatchPolicy:             &matchPolicyExact,
 					SideEffects:             &sideEffect,
-					TimeoutSeconds:          pointer.Int32(10),
+					TimeoutSeconds:          ptr.To(int32(10)),
 				},
 			},
 		}

@@ -24,7 +24,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -157,8 +156,8 @@ var _ = Describe("Defaults", func() {
 			SetDefaults_GardenletDeployment(obj)
 
 			Expect(obj).To(Equal(&GardenletDeployment{
-				ReplicaCount:         pointer.Int32(2),
-				RevisionHistoryLimit: pointer.Int32(2),
+				ReplicaCount:         ptr.To(int32(2)),
+				RevisionHistoryLimit: ptr.To(int32(2)),
 				Image:                &Image{},
 				VPA:                  ptr.To(true),
 			}))

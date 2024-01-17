@@ -33,7 +33,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -373,7 +372,7 @@ spec:
 						Name: name,
 						VolumeSource: corev1.VolumeSource{
 							Projected: &corev1.ProjectedVolumeSource{
-								DefaultMode: pointer.Int32(0400),
+								DefaultMode: ptr.To(int32(0400)),
 								Sources: []corev1.VolumeProjection{
 									{
 										Secret: &corev1.SecretProjection{
@@ -413,7 +412,7 @@ spec:
 					VolumeSource: corev1.VolumeSource{
 						Secret: &corev1.SecretVolumeSource{
 							SecretName:  secretNameTLSAuth,
-							DefaultMode: pointer.Int32(0400),
+							DefaultMode: ptr.To(int32(0400)),
 						},
 					},
 				})
@@ -581,8 +580,8 @@ spec:
 					},
 					ObjectMeta: *objectMetaFor(secretNameCA, secretNameClient, secretNameTLSAuth),
 					Spec: appsv1.DeploymentSpec{
-						RevisionHistoryLimit: pointer.Int32(2),
-						Replicas:             pointer.Int32(1),
+						RevisionHistoryLimit: ptr.To(int32(2)),
+						Replicas:             ptr.To(int32(1)),
 						Strategy: appsv1.DeploymentStrategy{
 							Type: appsv1.RollingUpdateDeploymentStrategyType,
 							RollingUpdate: &appsv1.RollingUpdateDeployment{
@@ -609,8 +608,8 @@ spec:
 					ObjectMeta: *objectMetaForEx(secretNameClients, secretNameCA, secretNameTLSAuth),
 					Spec: appsv1.StatefulSetSpec{
 						PodManagementPolicy:  appsv1.ParallelPodManagement,
-						RevisionHistoryLimit: pointer.Int32(2),
-						Replicas:             pointer.Int32(int32(replicas)),
+						RevisionHistoryLimit: ptr.To(int32(2)),
+						Replicas:             ptr.To(int32(replicas)),
 						UpdateStrategy: appsv1.StatefulSetUpdateStrategy{
 							Type: appsv1.RollingUpdateStatefulSetStrategyType,
 						},

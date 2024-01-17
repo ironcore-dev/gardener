@@ -17,7 +17,7 @@ package v1alpha1_test
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	. "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 )
@@ -35,9 +35,9 @@ var _ = Describe("Defaults", func() {
 
 			Expect(obj).To(Equal(&ManagedSeedSet{
 				Spec: ManagedSeedSetSpec{
-					Replicas:             pointer.Int32(1),
+					Replicas:             ptr.To(int32(1)),
 					UpdateStrategy:       &UpdateStrategy{},
-					RevisionHistoryLimit: pointer.Int32(10),
+					RevisionHistoryLimit: ptr.To(int32(10)),
 				},
 			}))
 		})
@@ -70,7 +70,7 @@ var _ = Describe("Defaults", func() {
 			SetDefaults_RollingUpdateStrategy(obj)
 
 			Expect(obj).To(Equal(&RollingUpdateStrategy{
-				Partition: pointer.Int32(0),
+				Partition: ptr.To(int32(0)),
 			}))
 		})
 	})

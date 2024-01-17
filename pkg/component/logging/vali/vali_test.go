@@ -34,7 +34,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -404,7 +403,7 @@ var _ = Describe("Vali", func() {
 					Generation: 2,
 				},
 				Spec: appsv1.StatefulSetSpec{
-					Replicas: pointer.Int32(0),
+					Replicas: ptr.To(int32(0)),
 				},
 				Status: appsv1.StatefulSetStatus{
 					ObservedGeneration: 2,
@@ -994,7 +993,7 @@ func getHVPA(isRBACProxyEnabled bool) *hvpav1alpha1.Hvpa {
 			Labels:    getLabels(),
 		},
 		Spec: hvpav1alpha1.HvpaSpec{
-			Replicas: pointer.Int32(1),
+			Replicas: ptr.To(int32(1)),
 			MaintenanceTimeWindow: &hvpav1alpha1.MaintenanceTimeWindow{
 				Begin: maintenanceBegin,
 				End:   maintenanceEnd,
@@ -1013,21 +1012,21 @@ func getHVPA(isRBACProxyEnabled bool) *hvpav1alpha1.Hvpa {
 						},
 					},
 					Spec: hvpav1alpha1.HpaTemplateSpec{
-						MinReplicas: pointer.Int32(1),
+						MinReplicas: ptr.To(int32(1)),
 						MaxReplicas: 1,
 						Metrics: []autoscalingv2beta1.MetricSpec{
 							{
 								Type: "Resource",
 								Resource: &autoscalingv2beta1.ResourceMetricSource{
 									Name:                     "cpu",
-									TargetAverageUtilization: pointer.Int32(80),
+									TargetAverageUtilization: ptr.To(int32(80)),
 								},
 							},
 							{
 								Type: "Resource",
 								Resource: &autoscalingv2beta1.ResourceMetricSource{
 									Name:                     "memory",
-									TargetAverageUtilization: pointer.Int32(80),
+									TargetAverageUtilization: ptr.To(int32(80)),
 								},
 							},
 						},
@@ -1049,11 +1048,11 @@ func getHVPA(isRBACProxyEnabled bool) *hvpav1alpha1.Hvpa {
 					MinChange: hvpav1alpha1.ScaleParams{
 						CPU: hvpav1alpha1.ChangeParams{
 							Value:      ptr.To("100m"),
-							Percentage: pointer.Int32(80),
+							Percentage: ptr.To(int32(80)),
 						},
 						Memory: hvpav1alpha1.ChangeParams{
 							Value:      ptr.To("300M"),
-							Percentage: pointer.Int32(80),
+							Percentage: ptr.To(int32(80)),
 						},
 					},
 				},
@@ -1065,22 +1064,22 @@ func getHVPA(isRBACProxyEnabled bool) *hvpav1alpha1.Hvpa {
 					MinChange: hvpav1alpha1.ScaleParams{
 						CPU: hvpav1alpha1.ChangeParams{
 							Value:      ptr.To("200m"),
-							Percentage: pointer.Int32(80),
+							Percentage: ptr.To(int32(80)),
 						},
 						Memory: hvpav1alpha1.ChangeParams{
 							Value:      ptr.To("500M"),
-							Percentage: pointer.Int32(80),
+							Percentage: ptr.To(int32(80)),
 						},
 					},
 				},
 				LimitsRequestsGapScaleParams: hvpav1alpha1.ScaleParams{
 					CPU: hvpav1alpha1.ChangeParams{
 						Value:      ptr.To("300m"),
-						Percentage: pointer.Int32(40),
+						Percentage: ptr.To(int32(40)),
 					},
 					Memory: hvpav1alpha1.ChangeParams{
 						Value:      ptr.To("1G"),
-						Percentage: pointer.Int32(40),
+						Percentage: ptr.To(int32(40)),
 					},
 				},
 				Template: hvpav1alpha1.VpaTemplate{
@@ -1203,7 +1202,7 @@ func getStatefulSet(isRBACProxyEnabled bool) *appsv1.StatefulSet {
 			Labels:    getLabels(),
 		},
 		Spec: appsv1.StatefulSetSpec{
-			Replicas: pointer.Int32(1),
+			Replicas: ptr.To(int32(1)),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: getLabels(),
 			},
@@ -1215,7 +1214,7 @@ func getStatefulSet(isRBACProxyEnabled bool) *appsv1.StatefulSet {
 					PriorityClassName:            priorityClassName,
 					AutomountServiceAccountToken: ptr.To(false),
 					SecurityContext: &corev1.PodSecurityContext{
-						FSGroup:             pointer.Int64(10001),
+						FSGroup:             ptr.To(int64(10001)),
 						FSGroupChangePolicy: &fsGroupChangeOnRootMismatch,
 					},
 					InitContainers: []corev1.Container{
@@ -1229,9 +1228,9 @@ func getStatefulSet(isRBACProxyEnabled bool) *appsv1.StatefulSet {
 							},
 							SecurityContext: &corev1.SecurityContext{
 								Privileged:   ptr.To(true),
-								RunAsUser:    pointer.Int64(0),
+								RunAsUser:    ptr.To(int64(0)),
 								RunAsNonRoot: ptr.To(false),
-								RunAsGroup:   pointer.Int64(0),
+								RunAsGroup:   ptr.To(int64(0)),
 							},
 							VolumeMounts: []corev1.VolumeMount{
 								{
@@ -1324,8 +1323,8 @@ fi
 								},
 							},
 							SecurityContext: &corev1.SecurityContext{
-								RunAsUser:              pointer.Int64(10001),
-								RunAsGroup:             pointer.Int64(10001),
+								RunAsUser:              ptr.To(int64(10001)),
+								RunAsGroup:             ptr.To(int64(10001)),
 								RunAsNonRoot:           ptr.To(true),
 								ReadOnlyRootFilesystem: ptr.To(true),
 							},
@@ -1364,8 +1363,8 @@ fi
 								},
 							},
 							SecurityContext: &corev1.SecurityContext{
-								RunAsUser:              pointer.Int64(10001),
-								RunAsGroup:             pointer.Int64(10001),
+								RunAsUser:              ptr.To(int64(10001)),
+								RunAsGroup:             ptr.To(int64(10001)),
 								RunAsNonRoot:           ptr.To(true),
 								ReadOnlyRootFilesystem: ptr.To(true),
 							},
@@ -1379,7 +1378,7 @@ fi
 									LocalObjectReference: corev1.LocalObjectReference{
 										Name: valiConfigMapName,
 									},
-									DefaultMode: pointer.Int32(0520),
+									DefaultMode: ptr.To(int32(0520)),
 								},
 							},
 						},
@@ -1445,8 +1444,8 @@ fi
 					},
 				},
 				SecurityContext: &corev1.SecurityContext{
-					RunAsUser:              pointer.Int64(65532),
-					RunAsGroup:             pointer.Int64(65534),
+					RunAsUser:              ptr.To(int64(65532)),
+					RunAsGroup:             ptr.To(int64(65534)),
 					RunAsNonRoot:           ptr.To(true),
 					ReadOnlyRootFilesystem: ptr.To(true),
 				},
@@ -1518,7 +1517,7 @@ wait
 				Name: "kubeconfig",
 				VolumeSource: corev1.VolumeSource{
 					Projected: &corev1.ProjectedVolumeSource{
-						DefaultMode: pointer.Int32(420),
+						DefaultMode: ptr.To(int32(420)),
 						Sources: []corev1.VolumeProjection{
 							{
 								Secret: &corev1.SecretProjection{

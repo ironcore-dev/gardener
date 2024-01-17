@@ -27,7 +27,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -194,7 +193,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 		})
 		deployment.Spec = appsv1.DeploymentSpec{
 			MinReadySeconds:      30,
-			RevisionHistoryLimit: pointer.Int32(2),
+			RevisionHistoryLimit: ptr.To(int32(2)),
 			Replicas:             k.values.Autoscaling.Replicas,
 			Selector:             &metav1.LabelSelector{MatchLabels: getLabels()},
 			Strategy: appsv1.DeploymentStrategy{
@@ -222,14 +221,14 @@ func (k *kubeAPIServer) reconcileDeployment(
 					DNSPolicy:                     corev1.DNSClusterFirst,
 					RestartPolicy:                 corev1.RestartPolicyAlways,
 					SchedulerName:                 corev1.DefaultSchedulerName,
-					TerminationGracePeriodSeconds: pointer.Int64(30),
+					TerminationGracePeriodSeconds: ptr.To(int64(30)),
 					SecurityContext: &corev1.PodSecurityContext{
 						// use the nonroot user from a distroless container
 						// https://github.com/GoogleContainerTools/distroless/blob/1a8918fcaa7313fd02ae08089a57a701faea999c/base/base.bzl#L8
 						RunAsNonRoot: ptr.To(true),
-						RunAsUser:    pointer.Int64(65532),
-						RunAsGroup:   pointer.Int64(65532),
-						FSGroup:      pointer.Int64(65532),
+						RunAsUser:    ptr.To(int64(65532)),
+						RunAsGroup:   ptr.To(int64(65532)),
+						FSGroup:      ptr.To(int64(65532)),
 					},
 					Containers: []corev1.Container{{
 						Name:                     ContainerNameKubeAPIServer,
@@ -342,7 +341,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName:  secretServiceAccountKey.Name,
-									DefaultMode: pointer.Int32(0640),
+									DefaultMode: ptr.To(int32(0640)),
 								},
 							},
 						},
@@ -351,7 +350,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName:  secretServiceAccountKeyBundle.Name,
-									DefaultMode: pointer.Int32(0640),
+									DefaultMode: ptr.To(int32(0640)),
 								},
 							},
 						},
@@ -368,7 +367,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
 									SecretName:  secretKubeAggregator.Name,
-									DefaultMode: pointer.Int32(0640),
+									DefaultMode: ptr.To(int32(0640)),
 								},
 							},
 						},
@@ -517,7 +516,7 @@ func (k *kubeAPIServer) handleTLSSNISettings(deployment *appsv1.Deployment, tlsS
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
 					SecretName:  sni.secretName,
-					DefaultMode: pointer.Int32(0640),
+					DefaultMode: ptr.To(int32(0640)),
 				},
 			},
 		})
@@ -588,7 +587,7 @@ func (k *kubeAPIServer) handleVPNSettingsNonHA(
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
 					SecretName:  secretHTTPProxy.Name,
-					DefaultMode: pointer.Int32(0640),
+					DefaultMode: ptr.To(int32(0640)),
 				},
 			},
 		},
@@ -670,11 +669,11 @@ func (k *kubeAPIServer) handleVPNSettingsHA(
 			Name: volumeNameAPIServerAccess,
 			VolumeSource: corev1.VolumeSource{
 				Projected: &corev1.ProjectedVolumeSource{
-					DefaultMode: pointer.Int32(420),
+					DefaultMode: ptr.To(int32(420)),
 					Sources: []corev1.VolumeProjection{
 						{
 							ServiceAccountToken: &corev1.ServiceAccountTokenProjection{
-								ExpirationSeconds: pointer.Int64(60 * 60 * 12),
+								ExpirationSeconds: ptr.To(int64(60 * 60 * 12)),
 								Path:              "token",
 							},
 						},
@@ -708,7 +707,7 @@ func (k *kubeAPIServer) handleVPNSettingsHA(
 			Name: volumeNameVPNSeedClient,
 			VolumeSource: corev1.VolumeSource{
 				Projected: &corev1.ProjectedVolumeSource{
-					DefaultMode: pointer.Int32(400),
+					DefaultMode: ptr.To(int32(400)),
 					Sources: []corev1.VolumeProjection{
 						{
 							Secret: &corev1.SecretProjection{
@@ -814,7 +813,7 @@ func (k *kubeAPIServer) vpnSeedClientContainer(index int) *corev1.Container {
 		},
 		SecurityContext: &corev1.SecurityContext{
 			RunAsNonRoot: ptr.To(false),
-			RunAsUser:    pointer.Int64(0),
+			RunAsUser:    ptr.To(int64(0)),
 			Capabilities: &corev1.Capabilities{
 				Add: []corev1.Capability{"NET_ADMIN"},
 			},
@@ -874,7 +873,7 @@ func (k *kubeAPIServer) vpnSeedPathControllerContainer() *corev1.Container {
 		},
 		SecurityContext: &corev1.SecurityContext{
 			RunAsNonRoot: ptr.To(false),
-			RunAsUser:    pointer.Int64(0),
+			RunAsUser:    ptr.To(int64(0)),
 			Capabilities: &corev1.Capabilities{
 				Add: []corev1.Capability{"NET_ADMIN"},
 			},
@@ -989,7 +988,7 @@ func (k *kubeAPIServer) handleKubeletSettings(deployment *appsv1.Deployment, sec
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
 					SecretName:  secretKubeletClient.Name,
-					DefaultMode: pointer.Int32(0640),
+					DefaultMode: ptr.To(int32(0640)),
 				},
 			},
 		},

@@ -34,7 +34,6 @@ import (
 	admissionapiv1 "k8s.io/pod-security-admission/admission/api/v1"
 	admissionapiv1alpha1 "k8s.io/pod-security-admission/admission/api/v1alpha1"
 	admissionapiv1beta1 "k8s.io/pod-security-admission/admission/api/v1beta1"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -706,8 +705,8 @@ exemptions:
 
 			It("should set the fields to the configured values", func() {
 				apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{
-					DefaultNotReadyTolerationSeconds:    pointer.Int64(120),
-					DefaultUnreachableTolerationSeconds: pointer.Int64(130),
+					DefaultNotReadyTolerationSeconds:    ptr.To(int64(120)),
+					DefaultUnreachableTolerationSeconds: ptr.To(int64(130)),
 				}
 
 				kubeAPIServer, err := NewKubeAPIServer(ctx, runtimeClientSet, resourceConfigClient, namespace, objectMeta, runtimeVersion, targetVersion, sm, namePrefix, apiServerConfig, autoscalingConfig, serviceNetworkCIDR, vpnConfig, priorityClassName, isWorkerless, staticTokenKubeconfigEnabled, auditWebhookConfig, authenticationWebhookConfig, authorizationWebhookConfig, resourcesToStoreInETCDEvents, fastRollout)
@@ -799,8 +798,8 @@ exemptions:
 
 			It("should set the field to the configured values", func() {
 				requests := &gardencorev1beta1.APIServerRequests{
-					MaxMutatingInflight:    pointer.Int32(1),
-					MaxNonMutatingInflight: pointer.Int32(2),
+					MaxMutatingInflight:    ptr.To(int32(1)),
+					MaxNonMutatingInflight: ptr.To(int32(2)),
 				}
 				apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{Requests: requests}
 
@@ -846,7 +845,7 @@ exemptions:
 
 			It("should set the field to the configured values", func() {
 				watchCacheSizes := &gardencorev1beta1.WatchCacheSizes{
-					Default:   pointer.Int32(1),
+					Default:   ptr.To(int32(1)),
 					Resources: []gardencorev1beta1.ResourceWatchCacheSize{{Resource: "foo"}},
 				}
 				apiServerConfig = &gardencorev1beta1.KubeAPIServerConfig{WatchCacheSizes: watchCacheSizes}
@@ -1036,7 +1035,7 @@ exemptions:
 
 			Entry("no change due to already set",
 				nil,
-				apiserver.AutoscalingConfig{Replicas: pointer.Int32(1)},
+				apiserver.AutoscalingConfig{Replicas: ptr.To(int32(1))},
 				int32(1),
 			),
 			Entry("use minReplicas because deployment does not exist",
@@ -1059,7 +1058,7 @@ exemptions:
 							Namespace: namespace,
 						},
 						Spec: appsv1.DeploymentSpec{
-							Replicas: pointer.Int32(3),
+							Replicas: ptr.To(int32(3)),
 						},
 					})).To(Succeed())
 				},
@@ -1075,7 +1074,7 @@ exemptions:
 							Namespace: namespace,
 						},
 						Spec: appsv1.DeploymentSpec{
-							Replicas: pointer.Int32(0),
+							Replicas: ptr.To(int32(0)),
 						},
 					})).To(Succeed())
 				},

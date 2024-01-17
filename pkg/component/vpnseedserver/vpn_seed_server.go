@@ -37,7 +37,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	vpaautoscalingv1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/utils/pointer"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -393,7 +392,7 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, dhSecret, secre
 					},
 				},
 			},
-			TerminationGracePeriodSeconds: pointer.Int64(30),
+			TerminationGracePeriodSeconds: ptr.To(int64(30)),
 			Volumes: []corev1.Volume{
 				{
 					Name: volumeNameDevNetTun,
@@ -408,7 +407,7 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, dhSecret, secre
 					Name: volumeNameCerts,
 					VolumeSource: corev1.VolumeSource{
 						Projected: &corev1.ProjectedVolumeSource{
-							DefaultMode: pointer.Int32(420),
+							DefaultMode: ptr.To(int32(420)),
 							Sources: []corev1.VolumeProjection{
 								{
 									Secret: &corev1.SecretProjection{
@@ -447,7 +446,7 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, dhSecret, secre
 					VolumeSource: corev1.VolumeSource{
 						Secret: &corev1.SecretVolumeSource{
 							SecretName:  secretTLSAuth.Name,
-							DefaultMode: pointer.Int32(0400),
+							DefaultMode: ptr.To(int32(0400)),
 						},
 					},
 				},
@@ -456,7 +455,7 @@ func (v *vpnSeedServer) podTemplate(configMap *corev1.ConfigMap, dhSecret, secre
 					VolumeSource: corev1.VolumeSource{
 						Secret: &corev1.SecretVolumeSource{
 							SecretName:  dhSecret.Name,
-							DefaultMode: pointer.Int32(0400),
+							DefaultMode: ptr.To(int32(0400)),
 						},
 					},
 				},
@@ -635,8 +634,8 @@ func (v *vpnSeedServer) deployStatefulSet(ctx context.Context, labels map[string
 		sts.Labels = labels
 		sts.Spec = appsv1.StatefulSetSpec{
 			PodManagementPolicy:  appsv1.ParallelPodManagement,
-			Replicas:             pointer.Int32(v.values.Replicas),
-			RevisionHistoryLimit: pointer.Int32(1),
+			Replicas:             ptr.To(v.values.Replicas),
+			RevisionHistoryLimit: ptr.To(int32(1)),
 			Selector:             &metav1.LabelSelector{MatchLabels: podLabels},
 			UpdateStrategy: appsv1.StatefulSetUpdateStrategy{
 				Type: appsv1.RollingUpdateStatefulSetStrategyType,
@@ -677,8 +676,8 @@ func (v *vpnSeedServer) deployDeployment(ctx context.Context, labels map[string]
 		maxUnavailable := intstr.FromInt32(0)
 		deployment.Labels = labels
 		deployment.Spec = appsv1.DeploymentSpec{
-			Replicas:             pointer.Int32(v.values.Replicas),
-			RevisionHistoryLimit: pointer.Int32(1),
+			Replicas:             ptr.To(v.values.Replicas),
+			RevisionHistoryLimit: ptr.To(int32(1)),
 			Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
 				v1beta1constants.LabelApp: DeploymentName,
 			}},
