@@ -382,7 +382,7 @@ var _ = Describe("Vali", func() {
 			valiPVC = &corev1.PersistentVolumeClaim{
 				ObjectMeta: valiPVCObjectMeta,
 				Spec: corev1.PersistentVolumeClaimSpec{
-					Resources: corev1.ResourceRequirements{
+					Resources: corev1.VolumeResourceRequirements{
 						Requests: map[corev1.ResourceName]resource.Quantity{
 							"storage": resource.MustParse("100Gi"),
 						},
@@ -1394,7 +1394,7 @@ fi
 						AccessModes: []corev1.PersistentVolumeAccessMode{
 							"ReadWriteOnce",
 						},
-						Resources: corev1.ResourceRequirements{
+						Resources: corev1.VolumeResourceRequirements{
 							Requests: map[corev1.ResourceName]resource.Quantity{
 								corev1.ResourceStorage: resource.MustParse("60Gi"),
 							},

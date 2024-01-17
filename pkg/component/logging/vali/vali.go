@@ -805,7 +805,7 @@ fi
 						AccessModes: []corev1.PersistentVolumeAccessMode{
 							corev1.ReadWriteOnce,
 						},
-						Resources: corev1.ResourceRequirements{
+						Resources: corev1.VolumeResourceRequirements{
 							Requests: map[corev1.ResourceName]resource.Quantity{
 								corev1.ResourceStorage: resource.MustParse("30Gi"),
 							},
