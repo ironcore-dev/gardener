@@ -157,7 +157,7 @@ func (r *Reconciler) reconcile(ctx context.Context, log logr.Logger, shoot *gard
 
 	// Reset the `EnableStaticTokenKubeconfig` value to false, when shoot cluster is updated to  k8s version >= 1.27.
 	if versionutils.ConstraintK8sLess127.Check(oldShootKubernetesVersion) && versionutils.ConstraintK8sGreaterEqual127.Check(shootKubernetesVersion) {
-		if pointer.BoolDeref(maintainedShoot.Spec.Kubernetes.EnableStaticTokenKubeconfig, false) {
+		if ptr.Deref(maintainedShoot.Spec.Kubernetes.EnableStaticTokenKubeconfig, false) {
 			maintainedShoot.Spec.Kubernetes.EnableStaticTokenKubeconfig = ptr.To(false)
 
 			reason := "EnableStaticTokenKubeconfig is set to false. Reason: The static token kubeconfig can no longer be enabled for Shoot clusters using Kubernetes version 1.27 and higher"
@@ -407,11 +407,11 @@ func maintainTasks(shoot *gardencorev1beta1.Shoot, config config.ShootMaintenanc
 		v1beta1constants.ShootTaskDeployDNSRecordIngress,
 	)
 
-	if pointer.BoolDeref(config.EnableShootControlPlaneRestarter, false) {
+	if ptr.Deref(config.EnableShootControlPlaneRestarter, false) {
 		controllerutils.AddTasks(shoot.Annotations, v1beta1constants.ShootTaskRestartControlPlanePods)
 	}
 
-	if pointer.BoolDeref(config.EnableShootCoreAddonRestarter, false) {
+	if ptr.Deref(config.EnableShootCoreAddonRestarter, false) {
 		controllerutils.AddTasks(shoot.Annotations, v1beta1constants.ShootTaskRestartCoreAddons)
 	}
 }
