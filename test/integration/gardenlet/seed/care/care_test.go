@@ -16,16 +16,13 @@ package care_test
 
 import (
 	"context"
-	"net/http"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/rest"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -46,7 +43,6 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/seed/care"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-	thirdpartyapiutil "github.com/gardener/gardener/third_party/controller-runtime/pkg/apiutil"
 )
 
 var _ = Describe("Seed Care controller tests", func() {
@@ -76,9 +72,6 @@ var _ = Describe("Seed Care controller tests", func() {
 						Label: labels.SelectorFromSet(labels.Set{testID: testRunID}),
 					},
 				},
-			},
-			MapperProvider: func(config *rest.Config, httpClient *http.Client) (meta.RESTMapper, error) {
-				return thirdpartyapiutil.NewDynamicRESTMapper(config)
 			},
 		})
 		Expect(err).NotTo(HaveOccurred())
