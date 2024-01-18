@@ -76,7 +76,7 @@ var _ = Describe("Defaults", func() {
 								SeedConfig: &gardenletv1alpha1.SeedConfig{},
 							},
 						},
-						Bootstrap:       bootstrapPtr(BootstrapToken),
+						Bootstrap:       ptr.To(BootstrapToken),
 						MergeWithParent: ptr.To(true),
 					},
 				},
@@ -137,7 +137,7 @@ var _ = Describe("Defaults", func() {
 								},
 							},
 						},
-						Bootstrap:       bootstrapPtr(BootstrapToken),
+						Bootstrap:       ptr.To(BootstrapToken),
 						MergeWithParent: ptr.To(true),
 					},
 				},
@@ -175,7 +175,7 @@ var _ = Describe("Defaults", func() {
 			SetDefaults_Image(obj)
 
 			Expect(obj).To(Equal(&Image{
-				PullPolicy: pullPolicyPtr(corev1.PullIfNotPresent),
+				PullPolicy: ptr.To(corev1.PullIfNotPresent),
 			}))
 		})
 
@@ -186,7 +186,7 @@ var _ = Describe("Defaults", func() {
 
 			Expect(obj).To(Equal(&Image{
 				Tag:        ptr.To("latest"),
-				PullPolicy: pullPolicyPtr(corev1.PullAlways),
+				PullPolicy: ptr.To(corev1.PullAlways),
 			}))
 		})
 	})
@@ -196,7 +196,3 @@ func encode(obj runtime.Object) []byte {
 	data, _ := json.Marshal(obj)
 	return data
 }
-
-func pullPolicyPtr(v corev1.PullPolicy) *corev1.PullPolicy { return &v }
-
-func bootstrapPtr(v Bootstrap) *Bootstrap { return &v }

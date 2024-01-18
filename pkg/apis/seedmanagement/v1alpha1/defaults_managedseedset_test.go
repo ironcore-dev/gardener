@@ -54,7 +54,7 @@ var _ = Describe("Defaults", func() {
 			SetDefaults_UpdateStrategy(obj)
 
 			Expect(obj).To(Equal(&UpdateStrategy{
-				Type: updateStrategyTypePtr(RollingUpdateStrategyType),
+				Type: ptr.To(RollingUpdateStrategyType),
 			}))
 		})
 	})
@@ -75,7 +75,3 @@ var _ = Describe("Defaults", func() {
 		})
 	})
 })
-
-func updateStrategyTypePtr(v UpdateStrategyType) *UpdateStrategyType {
-	return &v
-}
