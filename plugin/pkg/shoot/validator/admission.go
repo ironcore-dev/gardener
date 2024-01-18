@@ -1224,7 +1224,7 @@ func validateKubernetesVersionConstraints(a admission.Attributes, constraints []
 }
 
 func validateMachineTypes(constraints []core.MachineType, machine, oldMachine core.Machine, regions []core.Region, region string, zones []string) (bool, bool, bool, bool, []string) {
-	if machine.Type == oldMachine.Type && pointer.StringEqual(machine.Architecture, oldMachine.Architecture) {
+	if machine.Type == oldMachine.Type && ptr.Equal(machine.Architecture, oldMachine.Architecture) {
 		return true, true, true, true, nil
 	}
 
@@ -1236,7 +1236,7 @@ func validateMachineTypes(constraints []core.MachineType, machine, oldMachine co
 	)
 
 	for _, t := range constraints {
-		if pointer.StringEqual(t.Architecture, machine.Architecture) {
+		if ptr.Equal(t.Architecture, machine.Architecture) {
 			machinesWithSupportedArchitecture.Insert(t.Name)
 		}
 		if ptr.Deref(t.Usable, false) {
@@ -1479,7 +1479,7 @@ func getDefaultMachineImage(machineImages []core.MachineImage, imageName string,
 }
 
 func validateMachineImagesConstraints(a admission.Attributes, constraints []core.MachineImage, isNewWorkerPool bool, machine, oldMachine core.Machine) (bool, bool, bool, []string) {
-	if apiequality.Semantic.DeepEqual(machine.Image, oldMachine.Image) && pointer.StringEqual(machine.Architecture, oldMachine.Architecture) {
+	if apiequality.Semantic.DeepEqual(machine.Image, oldMachine.Image) && ptr.Equal(machine.Architecture, oldMachine.Architecture) {
 		return true, true, true, nil
 	}
 
