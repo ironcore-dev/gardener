@@ -442,8 +442,6 @@ var _ = Describe("OperatingSystemConfig", func() {
 					Expect(c.Get(ctx, client.ObjectKey{Name: e.Name, Namespace: e.Namespace}, actual)).To(Succeed())
 
 					obj := e.DeepCopy()
-					obj.TypeMeta.APIVersion = extensionsv1alpha1.SchemeGroupVersion.String()
-					obj.TypeMeta.Kind = extensionsv1alpha1.OperatingSystemConfigResource
 					obj.ResourceVersion = "1"
 
 					Expect(actual).To(Equal(obj))
@@ -467,8 +465,6 @@ var _ = Describe("OperatingSystemConfig", func() {
 					Expect(c.Get(ctx, client.ObjectKey{Name: e.Name, Namespace: e.Namespace}, actual)).To(Succeed())
 
 					obj := e.DeepCopy()
-					obj.TypeMeta.APIVersion = extensionsv1alpha1.SchemeGroupVersion.String()
-					obj.TypeMeta.Kind = extensionsv1alpha1.OperatingSystemConfigResource
 					obj.ResourceVersion = "1"
 
 					Expect(actual).To(Equal(obj))
@@ -502,8 +498,6 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 					obj := e.DeepCopy()
 
-					obj.TypeMeta.APIVersion = extensionsv1alpha1.SchemeGroupVersion.String()
-					obj.TypeMeta.Kind = extensionsv1alpha1.OperatingSystemConfigResource
 					obj.ResourceVersion = "1"
 
 					Expect(actual).To(Equal(obj))
@@ -796,19 +790,15 @@ var _ = Describe("OperatingSystemConfig", func() {
 				}
 
 				worker1OSCDownloader := expected[0]
-				worker1OSCDownloader.TypeMeta = metav1.TypeMeta{APIVersion: extensionsv1alpha1.SchemeGroupVersion.String(), Kind: "OperatingSystemConfig"}
 				worker1OSCDownloader.Annotations = nil
 
 				worker1OSCOriginal := expected[1]
-				worker1OSCOriginal.TypeMeta = metav1.TypeMeta{APIVersion: extensionsv1alpha1.SchemeGroupVersion.String(), Kind: "OperatingSystemConfig"}
 				worker1OSCOriginal.Annotations = nil
 
 				worker2OSCDownloader := expected[2]
-				worker2OSCDownloader.TypeMeta = metav1.TypeMeta{APIVersion: extensionsv1alpha1.SchemeGroupVersion.String(), Kind: "OperatingSystemConfig"}
 				worker2OSCDownloader.Annotations = nil
 
 				worker2OSCOriginal := expected[3]
-				worker2OSCOriginal.TypeMeta = metav1.TypeMeta{APIVersion: extensionsv1alpha1.SchemeGroupVersion.String(), Kind: "OperatingSystemConfig"}
 				worker2OSCOriginal.Annotations = nil
 
 				Expect(defaultDepWaiter.Wait(ctx)).To(Succeed())
