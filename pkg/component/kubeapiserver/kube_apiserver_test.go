@@ -242,10 +242,6 @@ var _ = Describe("KubeAPIServer", func() {
 				Expect(kapi.Deploy(ctx)).To(Succeed())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(horizontalPodAutoscaler), horizontalPodAutoscaler)).To(Succeed())
 				Expect(horizontalPodAutoscaler).To(DeepEqual(&autoscalingv2.HorizontalPodAutoscaler{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: autoscalingv2.SchemeGroupVersion.String(),
-						Kind:       "HorizontalPodAutoscaler",
-					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            horizontalPodAutoscaler.Name,
 						Namespace:       horizontalPodAutoscaler.Namespace,
@@ -310,10 +306,6 @@ var _ = Describe("KubeAPIServer", func() {
 					Expect(kapi.Deploy(ctx)).To(Succeed())
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(verticalPodAutoscaler), verticalPodAutoscaler)).To(Succeed())
 					Expect(verticalPodAutoscaler).To(DeepEqual(&vpaautoscalingv1.VerticalPodAutoscaler{
-						TypeMeta: metav1.TypeMeta{
-							APIVersion: vpaautoscalingv1.SchemeGroupVersion.String(),
-							Kind:       "VerticalPodAutoscaler",
-						},
 						ObjectMeta: metav1.ObjectMeta{
 							Name:            verticalPodAutoscaler.Name,
 							Namespace:       verticalPodAutoscaler.Namespace,
@@ -417,10 +409,6 @@ var _ = Describe("KubeAPIServer", func() {
 					Expect(kapi.Deploy(ctx)).To(Succeed())
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(hvpa), hvpa)).To(Succeed())
 					Expect(hvpa).To(DeepEqual(&hvpav1alpha1.Hvpa{
-						TypeMeta: metav1.TypeMeta{
-							APIVersion: hvpav1alpha1.SchemeGroupVersionHvpa.String(),
-							Kind:       "Hvpa",
-						},
 						ObjectMeta: metav1.ObjectMeta{
 							Name:            hvpa.Name,
 							Namespace:       hvpa.Namespace,
@@ -615,10 +603,6 @@ var _ = Describe("KubeAPIServer", func() {
 					Expect(kapi.Deploy(ctx)).To(Succeed())
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(podDisruptionBudget), podDisruptionBudget)).To(Succeed())
 					Expect(podDisruptionBudget).To(DeepEqual(&policyv1.PodDisruptionBudget{
-						TypeMeta: metav1.TypeMeta{
-							APIVersion: policyv1.SchemeGroupVersion.String(),
-							Kind:       "PodDisruptionBudget",
-						},
 						ObjectMeta: metav1.ObjectMeta{
 							Name:            podDisruptionBudget.Name,
 							Namespace:       podDisruptionBudget.Namespace,
@@ -653,10 +637,6 @@ var _ = Describe("KubeAPIServer", func() {
 
 					unhealthyPodEvictionPolicyAlwaysAllow := policyv1.AlwaysAllow
 					Expect(podDisruptionBudget).To(DeepEqual(&policyv1.PodDisruptionBudget{
-						TypeMeta: metav1.TypeMeta{
-							APIVersion: policyv1.SchemeGroupVersion.String(),
-							Kind:       "PodDisruptionBudget",
-						},
 						ObjectMeta: metav1.ObjectMeta{
 							Name:            podDisruptionBudget.Name,
 							Namespace:       podDisruptionBudget.Namespace,
@@ -725,10 +705,6 @@ subjects:
 				Expect(kapi.Deploy(ctx)).To(Succeed())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 				expectedMr := &resourcesv1alpha1.ManagedResource{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
-						Kind:       "ManagedResource",
-					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            managedResource.Name,
 						Namespace:       managedResource.Namespace,
@@ -749,10 +725,6 @@ subjects:
 				managedResourceSecret.Name = managedResource.Spec.SecretRefs[0].Name
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 				Expect(managedResourceSecret).To(DeepEqual(&corev1.Secret{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: corev1.SchemeGroupVersion.String(),
-						Kind:       "Secret",
-					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            managedResourceSecret.Name,
 						Namespace:       managedResourceSecret.Namespace,
@@ -784,10 +756,6 @@ subjects:
 					Expect(kapi.Deploy(ctx)).To(Succeed())
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(secretAdmissionKubeconfigs), secretAdmissionKubeconfigs)).To(Succeed())
 					Expect(secretAdmissionKubeconfigs).To(DeepEqual(&corev1.Secret{
-						TypeMeta: metav1.TypeMeta{
-							APIVersion: corev1.SchemeGroupVersion.String(),
-							Kind:       "Secret",
-						},
 						ObjectMeta: metav1.ObjectMeta{
 							Name:            secretAdmissionKubeconfigs.Name,
 							Namespace:       secretAdmissionKubeconfigs.Namespace,
@@ -825,10 +793,6 @@ subjects:
 					Expect(kapi.Deploy(ctx)).To(Succeed())
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(secretAdmissionKubeconfigs), secretAdmissionKubeconfigs)).To(Succeed())
 					Expect(secretAdmissionKubeconfigs).To(DeepEqual(&corev1.Secret{
-						TypeMeta: metav1.TypeMeta{
-							APIVersion: corev1.SchemeGroupVersion.String(),
-							Kind:       "Secret",
-						},
 						ObjectMeta: metav1.ObjectMeta{
 							Name:            secretAdmissionKubeconfigs.Name,
 							Namespace:       secretAdmissionKubeconfigs.Namespace,
@@ -868,10 +832,6 @@ subjects:
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedSecretOIDCCABundle), actualSecretOIDCCABundle)).To(Succeed())
 				Expect(actualSecretOIDCCABundle).To(DeepEqual(&corev1.Secret{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: corev1.SchemeGroupVersion.String(),
-						Kind:       "Secret",
-					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            expectedSecretOIDCCABundle.Name,
 						Namespace:       expectedSecretOIDCCABundle.Namespace,
@@ -911,10 +871,6 @@ resources:
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedSecretETCDEncryptionConfiguration), actualSecretETCDEncryptionConfiguration)).To(Succeed())
 				Expect(actualSecretETCDEncryptionConfiguration).To(Equal(&corev1.Secret{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: corev1.SchemeGroupVersion.String(),
-						Kind:       "Secret",
-					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      expectedSecretETCDEncryptionConfiguration.Name,
 						Namespace: expectedSecretETCDEncryptionConfiguration.Namespace,
@@ -1008,10 +964,6 @@ resources:
 
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedSecretETCDEncryptionConfiguration), actualSecretETCDEncryptionConfiguration)).To(Succeed())
 					Expect(actualSecretETCDEncryptionConfiguration).To(DeepEqual(&corev1.Secret{
-						TypeMeta: metav1.TypeMeta{
-							APIVersion: corev1.SchemeGroupVersion.String(),
-							Kind:       "Secret",
-						},
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      expectedSecretETCDEncryptionConfiguration.Name,
 							Namespace: expectedSecretETCDEncryptionConfiguration.Namespace,
@@ -1065,10 +1017,6 @@ resources:
 
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedSecret), actualSecret)).To(Succeed())
 					Expect(actualSecret).To(DeepEqual(&corev1.Secret{
-						TypeMeta: metav1.TypeMeta{
-							APIVersion: corev1.SchemeGroupVersion.String(),
-							Kind:       "Secret",
-						},
 						ObjectMeta: metav1.ObjectMeta{
 							Name:            expectedSecret.Name,
 							Namespace:       expectedSecret.Namespace,
@@ -1120,10 +1068,6 @@ resources:
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedSecret), actualSecret)).To(Succeed())
 				Expect(actualSecret).To(DeepEqual(&corev1.Secret{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: corev1.SchemeGroupVersion.String(),
-						Kind:       "Secret",
-					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            expectedSecret.Name,
 						Namespace:       expectedSecret.Namespace,
@@ -1162,10 +1106,6 @@ resources:
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedSecret), actualSecret)).To(Succeed())
 				Expect(actualSecret).To(DeepEqual(&corev1.Secret{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: corev1.SchemeGroupVersion.String(),
-						Kind:       "Secret",
-					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            expectedSecret.Name,
 						Namespace:       expectedSecret.Namespace,
@@ -1204,10 +1144,6 @@ resources:
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(expectedSecret), actualSecret)).To(Succeed())
 				Expect(actualSecret).To(DeepEqual(&corev1.Secret{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: corev1.SchemeGroupVersion.String(),
-						Kind:       "Secret",
-					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            expectedSecret.Name,
 						Namespace:       expectedSecret.Namespace,
@@ -1236,10 +1172,6 @@ plugins: null
 					Expect(kapi.Deploy(ctx)).To(Succeed())
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAdmission), configMapAdmission)).To(Succeed())
 					Expect(configMapAdmission).To(DeepEqual(&corev1.ConfigMap{
-						TypeMeta: metav1.TypeMeta{
-							APIVersion: corev1.SchemeGroupVersion.String(),
-							Kind:       "ConfigMap",
-						},
 						ObjectMeta: metav1.ObjectMeta{
 							Name:            configMapAdmission.Name,
 							Namespace:       configMapAdmission.Namespace,
@@ -1335,10 +1267,6 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 					Expect(kapi.Deploy(ctx)).To(Succeed())
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAdmission), configMapAdmission)).To(Succeed())
 					Expect(configMapAdmission).To(DeepEqual(&corev1.ConfigMap{
-						TypeMeta: metav1.TypeMeta{
-							APIVersion: corev1.SchemeGroupVersion.String(),
-							Kind:       "ConfigMap",
-						},
 						ObjectMeta: metav1.ObjectMeta{
 							Name:            configMapAdmission.Name,
 							Namespace:       configMapAdmission.Namespace,
@@ -1425,10 +1353,6 @@ kubeConfigFile: ""
 					Expect(kapi.Deploy(ctx)).To(Succeed())
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAdmission), configMapAdmission)).To(Succeed())
 					Expect(configMapAdmission).To(DeepEqual(&corev1.ConfigMap{
-						TypeMeta: metav1.TypeMeta{
-							APIVersion: corev1.SchemeGroupVersion.String(),
-							Kind:       "ConfigMap",
-						},
 						ObjectMeta: metav1.ObjectMeta{
 							Name:            configMapAdmission.Name,
 							Namespace:       configMapAdmission.Namespace,
@@ -1505,10 +1429,6 @@ kubeConfigFile: /etc/kubernetes/admission-kubeconfigs/validatingadmissionwebhook
 					Expect(kapi.Deploy(ctx)).To(Succeed())
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAdmission), configMapAdmission)).To(Succeed())
 					Expect(configMapAdmission).To(DeepEqual(&corev1.ConfigMap{
-						TypeMeta: metav1.TypeMeta{
-							APIVersion: corev1.SchemeGroupVersion.String(),
-							Kind:       "ConfigMap",
-						},
 						ObjectMeta: metav1.ObjectMeta{
 							Name:            configMapAdmission.Name,
 							Namespace:       configMapAdmission.Namespace,
@@ -1539,10 +1459,6 @@ rules:
 					Expect(kapi.Deploy(ctx)).To(Succeed())
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuditPolicy), configMapAuditPolicy)).To(Succeed())
 					Expect(configMapAuditPolicy).To(DeepEqual(&corev1.ConfigMap{
-						TypeMeta: metav1.TypeMeta{
-							APIVersion: corev1.SchemeGroupVersion.String(),
-							Kind:       "ConfigMap",
-						},
 						ObjectMeta: metav1.ObjectMeta{
 							Name:            configMapAuditPolicy.Name,
 							Namespace:       configMapAuditPolicy.Namespace,
@@ -1578,10 +1494,6 @@ rules:
 					Expect(kapi.Deploy(ctx)).To(Succeed())
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuditPolicy), configMapAuditPolicy)).To(Succeed())
 					Expect(configMapAuditPolicy).To(DeepEqual(&corev1.ConfigMap{
-						TypeMeta: metav1.TypeMeta{
-							APIVersion: corev1.SchemeGroupVersion.String(),
-							Kind:       "ConfigMap",
-						},
 						ObjectMeta: metav1.ObjectMeta{
 							Name:            configMapAuditPolicy.Name,
 							Namespace:       configMapAuditPolicy.Namespace,
@@ -1614,10 +1526,6 @@ rules:
 					Expect(kapi.Deploy(ctx)).To(Succeed())
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapEgressSelector), configMapEgressSelector)).To(Succeed())
 					Expect(configMapEgressSelector).To(DeepEqual(&corev1.ConfigMap{
-						TypeMeta: metav1.TypeMeta{
-							APIVersion: corev1.SchemeGroupVersion.String(),
-							Kind:       "ConfigMap",
-						},
 						ObjectMeta: metav1.ObjectMeta{
 							Name:            configMapEgressSelector.Name,
 							Namespace:       configMapEgressSelector.Namespace,

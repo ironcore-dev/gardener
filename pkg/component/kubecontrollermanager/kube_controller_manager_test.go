@@ -138,10 +138,6 @@ var _ = Describe("KubeControllerManager", func() {
 		vpaUpdateMode    = vpaautoscalingv1.UpdateModeAuto
 		controlledValues = vpaautoscalingv1.ContainerControlledValuesRequestsOnly
 		vpa              = &vpaautoscalingv1.VerticalPodAutoscaler{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: vpaautoscalingv1.SchemeGroupVersion.String(),
-				Kind:       "VerticalPodAutoscaler",
-			},
 			ObjectMeta: metav1.ObjectMeta{Name: vpaName, Namespace: namespace, ResourceVersion: "1"},
 			Spec: vpaautoscalingv1.VerticalPodAutoscalerSpec{
 				TargetRef: &autoscalingv1.CrossVersionObjectReference{
@@ -169,10 +165,6 @@ var _ = Describe("KubeControllerManager", func() {
 		}
 
 		secret = &corev1.Secret{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: corev1.SchemeGroupVersion.String(),
-				Kind:       "Secret",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      secretName,
 				Namespace: namespace,
@@ -192,10 +184,6 @@ var _ = Describe("KubeControllerManager", func() {
 		pdbMaxUnavailable = intstr.FromInt32(1)
 		pdbFor            = func(runtimeKubernetesVersionGreaterEquals126 bool) *policyv1.PodDisruptionBudget {
 			pdb := &policyv1.PodDisruptionBudget{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: policyv1.SchemeGroupVersion.String(),
-					Kind:       "PodDisruptionBudget",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      pdbName,
 					Namespace: namespace,
@@ -232,10 +220,6 @@ var _ = Describe("KubeControllerManager", func() {
 			}
 
 			return &hvpav1alpha1.Hvpa{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: hvpav1alpha1.SchemeGroupVersionHvpa.String(),
-					Kind:       "Hvpa",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      hvpaName,
 					Namespace: namespace,
@@ -325,10 +309,6 @@ var _ = Describe("KubeControllerManager", func() {
 
 		serviceFor = func(version string) *corev1.Service {
 			return &corev1.Service{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: corev1.SchemeGroupVersion.String(),
-					Kind:       "Service",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      serviceName,
 					Namespace: namespace,
@@ -362,10 +342,6 @@ var _ = Describe("KubeControllerManager", func() {
 		replicas      int32 = 1
 		deploymentFor       = func(version string, config *gardencorev1beta1.KubeControllerManagerConfig, isWorkerless bool, controllerWorkers ControllerWorkers) *appsv1.Deployment {
 			deploy := &appsv1.Deployment{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: appsv1.SchemeGroupVersion.String(),
-					Kind:       "Deployment",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      v1beta1constants.DeploymentNameKubeControllerManager,
 					Namespace: namespace,
@@ -596,10 +572,6 @@ namespace: kube-system
 		)
 
 		managedResourceSecret = &corev1.Secret{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: corev1.SchemeGroupVersion.String(),
-				Kind:       "Secret",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:            managedResourceSecretName,
 				Namespace:       namespace,
@@ -611,10 +583,6 @@ namespace: kube-system
 			},
 		}
 		managedResource = &resourcesv1alpha1.ManagedResource{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
-				Kind:       "ManagedResource",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:            managedResourceName,
 				Namespace:       namespace,
@@ -642,10 +610,6 @@ namespace: kube-system
 		verifyDeployment := func(config *gardencorev1beta1.KubeControllerManagerConfig, isWorkless bool, hvpaConfig *HVPAConfig, controllerWorkers ControllerWorkers, runtimeVersionGreaterEqual126 bool) {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 			expectedMr := &resourcesv1alpha1.ManagedResource{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
-					Kind:       "ManagedResource",
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            managedResource.Name,
 					Namespace:       managedResource.Namespace,
@@ -802,10 +766,6 @@ namespace: kube-system
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
 				expectedMr := &resourcesv1alpha1.ManagedResource{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
-						Kind:       "ManagedResource",
-					},
 					ObjectMeta: metav1.ObjectMeta{
 						Name:            managedResource.Name,
 						Namespace:       managedResource.Namespace,
