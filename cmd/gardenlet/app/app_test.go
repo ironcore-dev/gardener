@@ -135,7 +135,6 @@ var _ = Describe("Recreate Managed Resource Secrets", func() {
 		}
 
 		expectedSecret1 = &corev1.Secret{
-			TypeMeta: metav1.TypeMeta{Kind: "Secret", APIVersion: "v1"},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "secret1",
 				Namespace: "shoot-ns",
@@ -151,7 +150,6 @@ var _ = Describe("Recreate Managed Resource Secrets", func() {
 		}
 
 		expectedSecret2 = &corev1.Secret{
-			TypeMeta: metav1.TypeMeta{Kind: "Secret", APIVersion: "v1"},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "secret2",
 				Namespace: "garden",
@@ -167,7 +165,6 @@ var _ = Describe("Recreate Managed Resource Secrets", func() {
 		}
 
 		expectedSecret3 = &corev1.Secret{
-			TypeMeta: metav1.TypeMeta{Kind: "Secret", APIVersion: "v1"},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "secret3",
 				Namespace: "garden",
@@ -183,7 +180,6 @@ var _ = Describe("Recreate Managed Resource Secrets", func() {
 		}
 
 		expectedSecret4 = &corev1.Secret{
-			TypeMeta: metav1.TypeMeta{Kind: "Secret", APIVersion: "v1"},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "secret4",
 				Namespace: "garden",

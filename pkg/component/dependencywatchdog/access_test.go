@@ -64,10 +64,6 @@ var _ = Describe("Access", func() {
 		})
 
 		expectedExternalProbeSecret = &corev1.Secret{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "v1",
-				Kind:       "Secret",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:            externalProbeSecretName,
 				Namespace:       namespace,
@@ -102,10 +98,6 @@ users:
 		}
 
 		expectedInternalProbeSecret = &corev1.Secret{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "v1",
-				Kind:       "Secret",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:            internalProbeSecretName,
 				Namespace:       namespace,
