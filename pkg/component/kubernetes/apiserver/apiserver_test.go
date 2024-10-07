@@ -3893,7 +3893,7 @@ kind: AuthenticationConfiguration
 							RuntimeVersion: runtimeVersion,
 						},
 						Images:  images,
-						Version: semver.MustParse("1.26.9"),
+						Version: semver.MustParse("1.31.1"),
 					})
 					deployAndRead()
 
