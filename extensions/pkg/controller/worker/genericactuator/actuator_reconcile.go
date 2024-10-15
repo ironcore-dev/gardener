@@ -23,6 +23,7 @@ import (
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	extensionsworkercontroller "github.com/gardener/gardener/extensions/pkg/controller/worker"
 	extensionsworkerhelper "github.com/gardener/gardener/extensions/pkg/controller/worker/helper"
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -236,6 +237,11 @@ func deployMachineDeployments(
 			},
 		}
 
+		machineDeploymentStrategyType := machinev1alpha1.RollingUpdateMachineDeploymentStrategyType
+		if deployment.UpdateStrategy == v1beta1.InPlaceUpdate {
+			machineDeploymentStrategyType = machinev1alpha1.InPlaceUpdateMachineDeploymentStrategyType
+		}
+
 		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, cl, machineDeployment, func() error {
 			for k, v := range deployment.ClusterAutoscalerAnnotations {
 				metav1.SetMetaDataAnnotation(&machineDeployment.ObjectMeta, k, v)
@@ -244,10 +250,10 @@ func deployMachineDeployments(
 				Replicas:        replicas,
 				MinReadySeconds: 500,
 				Strategy: machinev1alpha1.MachineDeploymentStrategy{
-					Type: machinev1alpha1.RollingUpdateMachineDeploymentStrategyType,
+					Type: machineDeploymentStrategyType,
 					RollingUpdate: &machinev1alpha1.RollingUpdateMachineDeployment{
-						MaxSurge:       &deployment.MaxSurge,
 						MaxUnavailable: &deployment.MaxUnavailable,
+						MaxSurge:       &deployment.MaxSurge,
 					},
 				},
 				Selector: &metav1.LabelSelector{
