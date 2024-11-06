@@ -130,6 +130,9 @@ type MachineImageVersion struct {
 	// - '< 1.26' - supports only kubelet versions less than 1.26
 	// +optional
 	KubeletVersionConstraint *string `json:"kubeletVersionConstraint,omitempty" protobuf:"bytes,4,opt,name=kubeletVersionConstraint"`
+	// MinSupportedVersionForInPlaceUpdate specifies the minimum supported version from which an in-place update to this machine image version can be performed.
+	// +optional
+	MinSupportedVersionForInPlaceUpdate *string `json:"minSupportedVersionForInPlaceUpdate,omitempty" protobuf:"bytes,5,opt,name=minSupportedVersionForInPlaceUpdate"`
 }
 
 // ExpirableVersion contains a version and an expiration date.
