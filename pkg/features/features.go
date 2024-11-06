@@ -91,6 +91,11 @@ const (
 	// owner: @MartinWeindel @ScheererJ @axel7born @DockToFuture
 	// alpha: v1.104.0
 	NewVPN featuregate.Feature = "NewVPN"
+
+	// InPlaceNodeUpdates enables setting the update strategy of worker pools to `InPlaceUpdate` or `InPlaceUpdateOnLabel` in Shoot API.
+	// owner: @acumino @ary1992 @shafeeqes
+	// alpha: v1.109.0
+	InPlaceNodeUpdates featuregate.Feature = "InPlaceNodeUpdates"
 )
 
 // DefaultFeatureGate is the central feature gate map used by all gardener components.
@@ -129,6 +134,7 @@ var AllFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	ShootCredentialsBinding:   {Default: true, PreRelease: featuregate.Beta},
 	NewWorkerPoolHash:         {Default: false, PreRelease: featuregate.Alpha},
 	NewVPN:                    {Default: false, PreRelease: featuregate.Alpha},
+	InPlaceNodeUpdates:        {Default: false, PreRelease: featuregate.Alpha},
 }
 
 // GetFeatures returns a feature gate map with the respective specifications. Non-existing feature gates are ignored.
