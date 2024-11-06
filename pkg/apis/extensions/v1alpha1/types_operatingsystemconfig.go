@@ -85,6 +85,18 @@ type OperatingSystemConfigSpec struct {
 	// +patchStrategy=merge
 	// +optional
 	Files []File `json:"files,omitempty" patchStrategy:"merge" patchMergeKey:"path"`
+	// OSVersion is the version of the OperatingSystem.
+	// +optional
+	OSVersion *string `json:"osVersion,omitempty"`
+	// KubeletVersion is the version of the Kubelet.
+	// +optional
+	KubeletVersion *string `json:"kubeletVersion,omitempty"`
+	// CredentialsRotation is a structure containing information about the last initiation time of the CA and ServiceAccountKey rotation.
+	// +optional
+	CredentialsRotation *CredentialsRotation `json:"credentialsRotation,omitempty"`
+	// KubeletConfigHash is the hash calculated on fields relevant for in-place update of the Kubelet configuration.
+	// +optional
+	KubeletConfigHash *string `json:"kubeletConfigHash,omitempty"`
 }
 
 // Unit is a unit for the operating system configuration (usually, a systemd unit).
@@ -202,6 +214,9 @@ type OperatingSystemConfigStatus struct {
 	// config spec. It contains a reference to a secret as the result may contain confidential data.
 	// +optional
 	CloudConfig *CloudConfig `json:"cloudConfig,omitempty"`
+	// InPlaceUpdateConfig contains the configuration for in-place updates.
+	// +optional
+	InPlaceUpdateConfig *InPlaceUpdateConfig `json:"inPlaceUpdateConfig,omitempty"`
 }
 
 // CloudConfig contains the generated output for the given operating system
@@ -349,3 +364,23 @@ const (
 	// B64FileCodecID is the base64 file codec id.
 	B64FileCodecID FileCodecID = "b64"
 )
+
+// InPlaceUpdateConfig is a structure containing configuration for in-place updates.
+// TODO: Add image pull config
+type InPlaceUpdateConfig struct {
+	// UpdateScriptPath is the path of the update script to be triggered in case of in-place updates.
+	// +optional
+	UpdateScriptPath *string `json:"updateScriptPath,omitempty"`
+	// UpdateScriptArgs is the arguments to be passed to the update script for in-place updates.
+	// +optional
+	UpdateScriptArgs []string `json:"updateScriptArgs,omitempty"`
+}
+
+type CredentialsRotation struct {
+	// CARotationLastInitiationTime is the time when the last CA rotation was initiated.
+	// +optional
+	CARotationLastInitiationTime *string `json:"caRotationLastInitiationTime,omitempty"`
+	// ServiceAccountKeyRotationLastInitiationTime is the time when the last ServiceAccountKey rotation was initiated.
+	// +optional
+	ServiceAccountKeyRotationLastInitiationTime *string `json:"serviceAccountKeyRotationLastInitiationTime,omitempty"`
+}
