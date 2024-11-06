@@ -85,6 +85,12 @@ type OperatingSystemConfigSpec struct {
 	// +patchStrategy=merge
 	// +optional
 	Files []File `json:"files,omitempty" patchStrategy:"merge" patchMergeKey:"path"`
+	// OSVersion is the version of the OperatingSystem.
+	// +optional
+	OSVersion *string `json:"osVersion,omitempty"`
+	// KubeletVersion is the version of the Kubelet.
+	// +optional
+	KubeletVersion *string `json:"kubeletVersion,omitempty"`
 }
 
 // Unit is a unit for the operating system configuration (usually, a systemd unit).
