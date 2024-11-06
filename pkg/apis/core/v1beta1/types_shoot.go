@@ -1576,7 +1576,18 @@ type Worker struct {
 	// ClusterAutoscaler contains the cluster autoscaler configurations for the worker pool.
 	// +optional
 	ClusterAutoscaler *ClusterAutoscalerOptions `json:"clusterAutoscaler,omitempty" protobuf:"bytes,21,opt,name=clusterAutoscaler"`
+	// UpdateStrategy specifies the update strategy for the worker pool.
+	// +optional
+	UpdateStrategy *MachineUpdateStrategy `json:"updateStrategy,omitempty" protobuf:"bytes,22,opt,name=updateStrategy,casttype=MachineUpdateStrategy"`
 }
+
+type MachineUpdateStrategy string
+
+const (
+	RollingUpdate        MachineUpdateStrategy = "RollingUpdate"
+	InPlaceUpdate        MachineUpdateStrategy = "InPlaceUpdate"
+	InPlaceUpdateOnLabel MachineUpdateStrategy = "InPlaceUpdateOnLabel"
+)
 
 // ClusterAutoscalerOptions contains the cluster autoscaler configurations for a worker pool.
 type ClusterAutoscalerOptions struct {
