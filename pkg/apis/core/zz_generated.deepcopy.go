@@ -2955,6 +2955,11 @@ func (in *MachineImageVersion) DeepCopyInto(out *MachineImageVersion) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.MinSupportedVersionForInPlaceUpdate != nil {
+		in, out := &in.MinSupportedVersionForInPlaceUpdate, &out.MinSupportedVersionForInPlaceUpdate
+		*out = new(string)
+		**out = **in
+	}
 	return
 }
 
@@ -5775,6 +5780,11 @@ func (in *Worker) DeepCopyInto(out *Worker) {
 		in, out := &in.ClusterAutoscaler, &out.ClusterAutoscaler
 		*out = new(ClusterAutoscalerOptions)
 		(*in).DeepCopyInto(*out)
+	}
+	if in.UpdateStrategy != nil {
+		in, out := &in.UpdateStrategy, &out.UpdateStrategy
+		*out = new(MachineUpdateStrategy)
+		**out = **in
 	}
 	return
 }

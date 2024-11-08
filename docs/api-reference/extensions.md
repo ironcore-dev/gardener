@@ -1455,6 +1455,30 @@ This field is immutable.</p>
 <p>Files is a list of files that should get written to the host&rsquo;s file system.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>osVersion</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>OSVersion is the version of the OperatingSystem.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>kubeletVersion</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>KubeletVersion is the version of the Kubelet.</p>
+</td>
+</tr>
 </table>
 </td>
 </tr>
@@ -3944,6 +3968,30 @@ This field is immutable.</p>
 <p>Files is a list of files that should get written to the host&rsquo;s file system.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>osVersion</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>OSVersion is the version of the OperatingSystem.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>kubeletVersion</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>KubeletVersion is the version of the Kubelet.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="extensions.gardener.cloud/v1alpha1.OperatingSystemConfigStatus">OperatingSystemConfigStatus
@@ -4712,6 +4760,20 @@ ClusterAutoscalerOptions
 <td>
 <em>(Optional)</em>
 <p>ClusterAutoscaler contains the cluster autoscaler configurations for the worker pool.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>updateStrategy</code></br>
+<em>
+<a href="./core.md#core.gardener.cloud/v1beta1.MachineUpdateStrategy">
+github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineUpdateStrategy
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>UpdateStrategy specifies the update strategy for the worker pool.</p>
 </td>
 </tr>
 </tbody>

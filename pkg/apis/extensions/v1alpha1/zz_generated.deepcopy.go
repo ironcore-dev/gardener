@@ -1584,6 +1584,16 @@ func (in *OperatingSystemConfigSpec) DeepCopyInto(out *OperatingSystemConfigSpec
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
+	if in.OSVersion != nil {
+		in, out := &in.OSVersion, &out.OSVersion
+		*out = new(string)
+		**out = **in
+	}
+	if in.KubeletVersion != nil {
+		in, out := &in.KubeletVersion, &out.KubeletVersion
+		*out = new(string)
+		**out = **in
+	}
 	return
 }
 
@@ -1940,6 +1950,11 @@ func (in *WorkerPool) DeepCopyInto(out *WorkerPool) {
 		in, out := &in.ClusterAutoscaler, &out.ClusterAutoscaler
 		*out = new(ClusterAutoscalerOptions)
 		(*in).DeepCopyInto(*out)
+	}
+	if in.UpdateStrategy != nil {
+		in, out := &in.UpdateStrategy, &out.UpdateStrategy
+		*out = new(v1beta1.MachineUpdateStrategy)
+		**out = **in
 	}
 	return
 }

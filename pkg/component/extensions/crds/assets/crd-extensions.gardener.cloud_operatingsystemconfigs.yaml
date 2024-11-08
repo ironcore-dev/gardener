@@ -264,6 +264,12 @@ spec:
                   - path
                   type: object
                 type: array
+              kubeletVersion:
+                description: KubeletVersion is the version of the Kubelet.
+                type: string
+              osVersion:
+                description: OSVersion is the version of the OperatingSystem.
+                type: string
               providerConfig:
                 description: ProviderConfig is the provider specific configuration.
                 type: object
