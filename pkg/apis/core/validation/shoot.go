@@ -409,7 +409,26 @@ func validateWorkerUpdate(newHasWorkers, oldHasWorkers bool, fldPath *field.Path
 
 // ValidateProviderUpdate validates the specification of a Provider object.
 func ValidateProviderUpdate(newProvider, oldProvider *core.Provider, fldPath *field.Path) field.ErrorList {
-	return apivalidation.ValidateImmutableField(newProvider.Type, oldProvider.Type, fldPath.Child("type"))
+	allErrs := field.ErrorList{}
+
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newProvider.Type, oldProvider.Type, fldPath.Child("type"))...)
+
+	for i, newWorker := range newProvider.Workers {
+		oldWorker := newWorker
+		for _, ow := range oldProvider.Workers {
+			if ow.Name == newWorker.Name {
+				oldWorker = ow
+				break
+			}
+		}
+		idxPath := fldPath.Child("workers").Index(i)
+
+		if !ptr.Equal(oldWorker.UpdateStrategy, newWorker.UpdateStrategy) {
+			allErrs = append(allErrs, field.Invalid(idxPath.Child("updateStrategy"), newWorker.UpdateStrategy, "updateStrategy can't be changed"))
+		}
+	}
+
+	return allErrs
 }
 
 // ValidateShootStatusUpdate validates the status field of a Shoot object.
