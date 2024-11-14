@@ -46,9 +46,11 @@ func extractOSCFromSecret(secret *corev1.Secret) (*extensionsv1alpha1.OperatingS
 }
 
 type operatingSystemConfigChanges struct {
-	units      units
-	files      files
-	containerd containerd
+	units               units
+	files               files
+	containerd          containerd
+	osVersion           osVersion
+	kubeletMinorVersion kubeletMinorVersion
 }
 
 type units struct {
@@ -71,6 +73,15 @@ type files struct {
 	deleted []extensionsv1alpha1.File
 }
 
+type osVersion struct {
+	changed bool
+	version string
+}
+
+type kubeletMinorVersion struct {
+	changed bool
+}
+
 type containerd struct {
 	// configFileChange tracks if the config file of containerd will change, so that GNA can restart the unit.
 	configFileChange bool
@@ -83,7 +94,7 @@ type containerdRegistries struct {
 	deleted []extensionsv1alpha1.RegistryConfig
 }
 
-func computeOperatingSystemConfigChanges(fs afero.Afero, newOSC *extensionsv1alpha1.OperatingSystemConfig) (*operatingSystemConfigChanges, error) {
+func computeOperatingSystemConfigChanges(fs afero.Afero, newOSC *extensionsv1alpha1.OperatingSystemConfig, currentOSVersion string) (*operatingSystemConfigChanges, error) {
 	changes := &operatingSystemConfigChanges{}
 
 	// osc.files and osc.unit.files should be changed the same way by OSC controller.
@@ -133,6 +144,23 @@ func computeOperatingSystemConfigChanges(fs afero.Afero, newOSC *extensionsv1alp
 		mergeUnits(newOSC.Spec.Units, newOSC.Status.ExtensionUnits),
 		changes.files,
 	)
+
+	if oldOSC.Spec.OSVersion != nil && newOSC.Spec.OSVersion != nil && *oldOSC.Spec.OSVersion != *newOSC.Spec.OSVersion {
+		if currentOSVersion == *newOSC.Spec.OSVersion {
+			changes.osVersion.changed = false
+		} else {
+			changes.osVersion.changed = true
+			changes.osVersion.version = *newOSC.Spec.OSVersion
+		}
+	} else {
+		changes.osVersion.changed = false
+	}
+
+	if oldOSC.Spec.KubeletVersion != nil && newOSC.Spec.KubeletVersion != nil && *oldOSC.Spec.KubeletVersion != *newOSC.Spec.KubeletVersion {
+		changes.kubeletMinorVersion.changed = true
+	} else {
+		changes.kubeletMinorVersion.changed = false
+	}
 
 	var (
 		newRegistries []extensionsv1alpha1.RegistryConfig
