@@ -1479,6 +1479,20 @@ string
 <p>KubeletVersion is the version of the Kubelet.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>credentialsRotation</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.CredentialsRotation">
+CredentialsRotation
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CredentialsRotation is a structure containing information about the last initiation time of the CA and ServiceAccountKey rotation.</p>
+</td>
+</tr>
 </table>
 </td>
 </tr>
@@ -2604,6 +2618,48 @@ DefaultStatus
 </tr>
 </tbody>
 </table>
+<h3 id="extensions.gardener.cloud/v1alpha1.CredentialsRotation">CredentialsRotation
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.OperatingSystemConfigSpec">OperatingSystemConfigSpec</a>)
+</p>
+<p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>caRotationLastInitiationTime</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CARotationLastInitiationTime is the time when the last CA rotation was initiated.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>serviceAccountKeyRotationLastInitiationTime</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ServiceAccountKeyRotationLastInitiationTime is the time when the last ServiceAccountKey rotation was initiated.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="extensions.gardener.cloud/v1alpha1.DNSRecordSpec">DNSRecordSpec
 </h3>
 <p>
@@ -3427,6 +3483,38 @@ string
 <p>
 <p>IPFamily is a type for specifying an IP protocol version to use in Gardener clusters.</p>
 </p>
+<h3 id="extensions.gardener.cloud/v1alpha1.InPlaceUpdateConfig">InPlaceUpdateConfig
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.OperatingSystemConfigStatus">OperatingSystemConfigStatus</a>)
+</p>
+<p>
+<p>InPlaceUpdateConfig is a structure containing configuration for in-place updates.
+TODO: Add image pull config</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>updateScriptPath</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>UpdateScriptPath is the path of the update script to be triggered in case of in-place updates.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="extensions.gardener.cloud/v1alpha1.InfrastructureSpec">InfrastructureSpec
 </h3>
 <p>
@@ -3992,6 +4080,20 @@ string
 <p>KubeletVersion is the version of the Kubelet.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>credentialsRotation</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.CredentialsRotation">
+CredentialsRotation
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CredentialsRotation is a structure containing information about the last initiation time of the CA and ServiceAccountKey rotation.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="extensions.gardener.cloud/v1alpha1.OperatingSystemConfigStatus">OperatingSystemConfigStatus
@@ -4068,6 +4170,20 @@ CloudConfig
 <em>(Optional)</em>
 <p>CloudConfig is a structure for containing the generated output for the given operating system
 config spec. It contains a reference to a secret as the result may contain confidential data.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>inPlaceUpdateConfig</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.InPlaceUpdateConfig">
+InPlaceUpdateConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>InPlaceUpdateConfig contains the configuration for in-place updates.</p>
 </td>
 </tr>
 </tbody>

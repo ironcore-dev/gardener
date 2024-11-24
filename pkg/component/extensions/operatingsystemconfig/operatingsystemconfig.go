@@ -716,34 +716,49 @@ func (o *operatingSystemConfig) newDeployer(version int, osc *extensionsv1alpha1
 		return deployer{}, err
 	}
 
+	var (
+		caRotationLastInitiationTime, serviceAccountKeyRotationLastInitiationTime *string
+	)
+
+	if o.values.CredentialsRotationStatus != nil {
+		if o.values.CredentialsRotationStatus.CertificateAuthorities != nil {
+			caRotationLastInitiationTime = ptr.To(o.values.CredentialsRotationStatus.CertificateAuthorities.LastInitiationTime.String())
+		}
+		if o.values.CredentialsRotationStatus.ServiceAccountKey != nil {
+			serviceAccountKeyRotationLastInitiationTime = ptr.To(o.values.CredentialsRotationStatus.ServiceAccountKey.LastInitiationTime.String())
+		}
+	}
+
 	return deployer{
-		client:                  o.client,
-		osc:                     osc,
-		worker:                  worker,
-		purpose:                 purpose,
-		key:                     oscKey,
-		apiServerURL:            o.values.APIServerURL,
-		caBundle:                caBundle,
-		clusterCASecretName:     clusterCASecret.Name,
-		clusterCABundle:         clusterCASecret.Data[secretsutils.DataKeyCertificateBundle],
-		clusterDNSAddresses:     o.values.ClusterDNSAddresses,
-		clusterDomain:           o.values.ClusterDomain,
-		criName:                 criName,
-		images:                  images,
-		kubeletCABundle:         kubeletCASecret.Data[secretsutils.DataKeyCertificateBundle],
-		kubeletConfigParameters: kubeletConfigParameters,
-		kubeletCLIFlags:         kubeletCLIFlags,
-		kubeletDataVolumeName:   worker.KubeletDataVolumeName,
-		kubeProxyEnabled:        o.values.KubeProxyEnabled,
-		kubernetesVersion:       kubernetesVersion,
-		sshPublicKeys:           o.values.SSHPublicKeys,
-		sshAccessEnabled:        o.values.SSHAccessEnabled,
-		valiIngressHostName:     o.values.ValiIngressHostName,
-		valitailEnabled:         o.values.ValitailEnabled,
-		nodeMonitorGracePeriod:  o.values.NodeMonitorGracePeriod,
-		nodeLocalDNSEnabled:     o.values.NodeLocalDNSEnabled,
-		primaryIPFamily:         o.values.PrimaryIPFamily,
-		taints:                  worker.Taints,
+		client:                       o.client,
+		osc:                          osc,
+		worker:                       worker,
+		purpose:                      purpose,
+		key:                          oscKey,
+		apiServerURL:                 o.values.APIServerURL,
+		caBundle:                     caBundle,
+		clusterCASecretName:          clusterCASecret.Name,
+		clusterCABundle:              clusterCASecret.Data[secretsutils.DataKeyCertificateBundle],
+		clusterDNSAddresses:          o.values.ClusterDNSAddresses,
+		clusterDomain:                o.values.ClusterDomain,
+		criName:                      criName,
+		images:                       images,
+		kubeletCABundle:              kubeletCASecret.Data[secretsutils.DataKeyCertificateBundle],
+		kubeletConfigParameters:      kubeletConfigParameters,
+		kubeletCLIFlags:              kubeletCLIFlags,
+		kubeletDataVolumeName:        worker.KubeletDataVolumeName,
+		kubeProxyEnabled:             o.values.KubeProxyEnabled,
+		kubernetesVersion:            kubernetesVersion,
+		sshPublicKeys:                o.values.SSHPublicKeys,
+		sshAccessEnabled:             o.values.SSHAccessEnabled,
+		valiIngressHostName:          o.values.ValiIngressHostName,
+		valitailEnabled:              o.values.ValitailEnabled,
+		nodeMonitorGracePeriod:       o.values.NodeMonitorGracePeriod,
+		nodeLocalDNSEnabled:          o.values.NodeLocalDNSEnabled,
+		primaryIPFamily:              o.values.PrimaryIPFamily,
+		taints:                       worker.Taints,
+		caRotationLastInitiationTime: caRotationLastInitiationTime,
+		serviceAccountKeyRotationLastInitiationTime: serviceAccountKeyRotationLastInitiationTime,
 	}, nil
 }
 
@@ -789,27 +804,29 @@ type deployer struct {
 	apiServerURL string
 
 	// original values
-	caBundle                *string
-	clusterCASecretName     string
-	clusterCABundle         []byte
-	clusterDNSAddresses     []string
-	clusterDomain           string
-	criName                 extensionsv1alpha1.CRIName
-	images                  map[string]*imagevectorutils.Image
-	kubeletCABundle         []byte
-	kubeletConfigParameters components.ConfigurableKubeletConfigParameters
-	kubeletCLIFlags         components.ConfigurableKubeletCLIFlags
-	kubeletDataVolumeName   *string
-	kubeProxyEnabled        bool
-	kubernetesVersion       *semver.Version
-	sshPublicKeys           []string
-	sshAccessEnabled        bool
-	valiIngressHostName     string
-	valitailEnabled         bool
-	nodeLocalDNSEnabled     bool
-	nodeMonitorGracePeriod  metav1.Duration
-	primaryIPFamily         gardencorev1beta1.IPFamily
-	taints                  []corev1.Taint
+	caBundle                                    *string
+	clusterCASecretName                         string
+	clusterCABundle                             []byte
+	clusterDNSAddresses                         []string
+	clusterDomain                               string
+	criName                                     extensionsv1alpha1.CRIName
+	images                                      map[string]*imagevectorutils.Image
+	kubeletCABundle                             []byte
+	kubeletConfigParameters                     components.ConfigurableKubeletConfigParameters
+	kubeletCLIFlags                             components.ConfigurableKubeletCLIFlags
+	kubeletDataVolumeName                       *string
+	kubeProxyEnabled                            bool
+	kubernetesVersion                           *semver.Version
+	sshPublicKeys                               []string
+	sshAccessEnabled                            bool
+	valiIngressHostName                         string
+	valitailEnabled                             bool
+	nodeLocalDNSEnabled                         bool
+	nodeMonitorGracePeriod                      metav1.Duration
+	primaryIPFamily                             gardencorev1beta1.IPFamily
+	taints                                      []corev1.Taint
+	caRotationLastInitiationTime                *string
+	serviceAccountKeyRotationLastInitiationTime *string
 }
 
 // exposed for testing
@@ -902,6 +919,10 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 		d.osc.Spec.Files = files
 		d.osc.Spec.OSVersion = d.worker.Machine.Image.Version
 		d.osc.Spec.KubeletVersion = ptr.To(d.kubernetesVersion.String())
+		d.osc.Spec.CredentialsRotation = &extensionsv1alpha1.CredentialsRotation{
+			CARotationLastInitiationTime:                d.caRotationLastInitiationTime,
+			ServiceAccountKeyRotationLastInitiationTime: d.serviceAccountKeyRotationLastInitiationTime,
+		}
 
 		if d.worker.CRI != nil {
 			d.osc.Spec.CRIConfig = &extensionsv1alpha1.CRIConfig{

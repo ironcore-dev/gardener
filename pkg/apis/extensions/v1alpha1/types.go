@@ -83,8 +83,3 @@ const (
 	// IPFamilyIPv6 is the IPv6 IP family.
 	IPFamilyIPv6 IPFamily = "IPv6"
 )
-
-const (
-	PathForInPlaceOSUpdate = "/var/lib/update/"
-	ScriptName             = "update.sh"
-)

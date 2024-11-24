@@ -70,6 +70,19 @@ spec:
                 x-kubernetes-validations:
                 - message: Value is immutable
                   rule: self == oldSelf
+              credentialsRotation:
+                description: CredentialsRotation is a structure containing information
+                  about the last initiation time of the CA and ServiceAccountKey rotation.
+                properties:
+                  caRotationLastInitiationTime:
+                    description: CARotationLastInitiationTime is the time when the
+                      last CA rotation was initiated.
+                    type: string
+                  serviceAccountKeyRotationLastInitiationTime:
+                    description: ServiceAccountKeyRotationLastInitiationTime is the
+                      time when the last ServiceAccountKey rotation was initiated.
+                    type: string
+                type: object
               criConfig:
                 description: CRI config is a structure contains configurations of
                   the CRI library
@@ -532,6 +545,15 @@ spec:
                   - name
                   type: object
                 type: array
+              inPlaceUpdateConfig:
+                description: InPlaceUpdateConfig contains the configuration for in-place
+                  updates.
+                properties:
+                  updateScriptPath:
+                    description: UpdateScriptPath is the path of the update script
+                      to be triggered in case of in-place updates.
+                    type: string
+                type: object
               lastError:
                 description: LastError holds information about the last occurred error
                   during an operation.
