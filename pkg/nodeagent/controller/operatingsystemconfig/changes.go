@@ -16,6 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/utils/ptr"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
@@ -46,11 +47,13 @@ func extractOSCFromSecret(secret *corev1.Secret) (*extensionsv1alpha1.OperatingS
 }
 
 type operatingSystemConfigChanges struct {
-	units               units
-	files               files
-	containerd          containerd
-	osVersion           osVersion
-	kubeletMinorVersion kubeletMinorVersion
+	units         units
+	files         files
+	containerd    containerd
+	osVersion     osVersion
+	kubeletUpdate kubeletUpdate
+	caRotation    bool
+	saKeyRotation bool
 }
 
 type units struct {
@@ -78,8 +81,9 @@ type osVersion struct {
 	version string
 }
 
-type kubeletMinorVersion struct {
-	changed bool
+type kubeletUpdate struct {
+	minorVersionUpdate bool
+	configUpdate       bool
 }
 
 type containerd struct {
@@ -145,22 +149,31 @@ func computeOperatingSystemConfigChanges(fs afero.Afero, newOSC *extensionsv1alp
 		changes.files,
 	)
 
-	if oldOSC.Spec.OSVersion != nil && newOSC.Spec.OSVersion != nil && *oldOSC.Spec.OSVersion != *newOSC.Spec.OSVersion {
-		if currentOSVersion == *newOSC.Spec.OSVersion {
-			changes.osVersion.changed = false
-		} else {
-			changes.osVersion.changed = true
-			changes.osVersion.version = *newOSC.Spec.OSVersion
-		}
-	} else {
-		changes.osVersion.changed = false
+	if oldOSC.Spec.OSVersion != nil &&
+		newOSC.Spec.OSVersion != nil &&
+		*oldOSC.Spec.OSVersion != *newOSC.Spec.OSVersion &&
+		currentOSVersion != *newOSC.Spec.OSVersion {
+		changes.osVersion.changed = true
+		changes.osVersion.version = *newOSC.Spec.OSVersion
 	}
 
+	// TODO: replace with ptr.Equal
 	if oldOSC.Spec.KubeletVersion != nil && newOSC.Spec.KubeletVersion != nil && *oldOSC.Spec.KubeletVersion != *newOSC.Spec.KubeletVersion {
-		changes.kubeletMinorVersion.changed = true
-	} else {
-		changes.kubeletMinorVersion.changed = false
+		changes.kubeletUpdate.minorVersionUpdate = true
 	}
+
+	if newOSC.Spec.CredentialsRotation != nil {
+		// Rotation is triggered for the first time
+		if oldOSC.Spec.CredentialsRotation == nil {
+			changes.caRotation = newOSC.Spec.CredentialsRotation.CARotationLastInitiationTime != nil
+			changes.saKeyRotation = newOSC.Spec.CredentialsRotation.ServiceAccountKeyRotationLastInitiationTime != nil
+		} else {
+			changes.caRotation = !ptr.Equal(oldOSC.Spec.CredentialsRotation.CARotationLastInitiationTime, newOSC.Spec.CredentialsRotation.CARotationLastInitiationTime)
+			changes.saKeyRotation = !ptr.Equal(oldOSC.Spec.CredentialsRotation.ServiceAccountKeyRotationLastInitiationTime, newOSC.Spec.CredentialsRotation.ServiceAccountKeyRotationLastInitiationTime)
+		}
+	}
+
+	// TODO: consider kubelet config change as well
 
 	var (
 		newRegistries []extensionsv1alpha1.RegistryConfig
