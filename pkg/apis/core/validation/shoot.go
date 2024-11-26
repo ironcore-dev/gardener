@@ -424,9 +424,9 @@ func ValidateProviderUpdate(newProvider, oldProvider *core.Provider, fldPath *fi
 		}
 		idxPath := fldPath.Child("workers").Index(i)
 
-		if !ptr.Equal(oldWorker.UpdateStrategy, newWorker.UpdateStrategy) {
-			allErrs = append(allErrs, field.Invalid(idxPath.Child("updateStrategy"), newWorker.UpdateStrategy, "updateStrategy can't be changed"))
-		}
+		// if !ptr.Equal(oldWorker.UpdateStrategy, newWorker.UpdateStrategy) {
+		// 	allErrs = append(allErrs, field.Invalid(idxPath.Child("updateStrategy"), newWorker.UpdateStrategy, "updateStrategy can't be changed"))
+		// }
 
 		if ptr.Equal(oldWorker.UpdateStrategy, newWorker.UpdateStrategy) && newWorker.UpdateStrategy != nil &&
 			(*newWorker.UpdateStrategy == core.InPlaceUpdate || *newWorker.UpdateStrategy == core.InPlaceUpdateOnLabel) {
