@@ -1846,7 +1846,7 @@ func ValidateWorker(worker core.Worker, kubernetes core.Kubernetes, fldPath *fie
 		}
 
 		if !features.DefaultFeatureGate.Enabled(features.InPlaceNodeUpdates) && (*worker.UpdateStrategy == core.InPlaceUpdate || *worker.UpdateStrategy == core.InPlaceUpdateOnLabel) {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("updateStrategy"), *worker.UpdateStrategy, "can configure `InPlaceUpdate` and `InPlaceUpdateOnLabel` update strategie when the `InPlaceNodeUpdates` feature gate is disabled."))
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("updateStrategy"), *worker.UpdateStrategy, "cannot configure `InPlaceUpdate` and `InPlaceUpdateOnLabel` update strategies when the `InPlaceNodeUpdates` feature gate is disabled."))
 		}
 	}
 
