@@ -48,6 +48,7 @@ import (
 	filespkg "github.com/gardener/gardener/pkg/nodeagent/files"
 	"github.com/gardener/gardener/pkg/nodeagent/registry"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 )
 
@@ -182,32 +183,34 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("failed reloading systemd daemon: %w", err)
 	}
 
-	if node.Annotation["rebootstrapKubelet"] == "true" {
-		if err := r.rebootstrapKubelet(ctx, log, node); err != nil {
-			return reconcile.Result{}, fmt.Errorf("failed to rebootstrap kubelet: %w", err)
-		}
-	}
-
-	// TODO: can be skipped, dedicated health controller should report kubelet unhealthy
-	if oscChanges.kubeletUpdate.minorVersionUpdate {
-		httpClient := &http.Client{Timeout: 10 * time.Second}
-		request, err := http.NewRequestWithContext(ctx, http.MethodGet, healthcheck.DefaultKubeletHealthEndpoint, nil)
-		if err != nil {
-			log.Error(err, "Creating request to kubelet health endpoint failed")
-			return reconcile.Result{}, err
+	if isInPlaceUpdate(oscChanges) {
+		if oscChanges.caRotation {
+			if err := r.rebootstrapKubelet(ctx, log, node); err != nil {
+				return reconcile.Result{}, fmt.Errorf("failed to rebootstrap kubelet: %w", err)
+			}
 		}
 
-		if err := retry.UntilTimeout(ctx, 5*time.Second, 5*time.Minute, func(_ context.Context) (done bool, err error) {
-			response, err := httpClient.Do(request)
+		// TODO: can be skipped, dedicated health controller should report kubelet unhealthy
+		if oscChanges.kubeletUpdate.minorVersionUpdate {
+			httpClient := &http.Client{Timeout: 10 * time.Second}
+			request, err := http.NewRequestWithContext(ctx, http.MethodGet, healthcheck.DefaultKubeletHealthEndpoint, nil)
 			if err != nil {
-				log.Error(err, "HTTP request to kubelet health endpoint failed")
-			} else if response.StatusCode == http.StatusOK {
-				return true, nil
+				log.Error(err, "Creating request to kubelet health endpoint failed")
+				return reconcile.Result{}, err
 			}
 
-			return false, nil
-		}); err != nil {
-			return reconcile.Result{}, fmt.Errorf("failed waiting for kubelet to become healthy after update: %w", err)
+			if err := retry.UntilTimeout(ctx, 5*time.Second, 5*time.Minute, func(_ context.Context) (done bool, err error) {
+				response, err := httpClient.Do(request)
+				if err != nil {
+					log.Error(err, "HTTP request to kubelet health endpoint failed")
+				} else if response.StatusCode == http.StatusOK {
+					return true, nil
+				}
+
+				return false, nil
+			}); err != nil {
+				return reconcile.Result{}, fmt.Errorf("failed waiting for kubelet to become healthy after update: %w", err)
+			}
 		}
 	}
 
@@ -244,24 +247,42 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		"deletedUnits", len(oscChanges.units.deleted),
 	)
 
-	log.Info("Currently running OS version", "version", osVersion)
-	// If node is successfully updated with the new OS version, we must label the node with MCM label.
-	if node != nil {
-		if _, ok := node.Annotations[annotationUpdateOSVersion]; ok {
-			if osVersion == ptr.Deref(osc.Spec.OSVersion, "") {
-				log.Info("Updating OS version successful, version matches", "node", node.Name, "version", osVersion)
-				log.Info("Labeling node with MCM label", "node", node.Name, "label", machinev1alpha1.LabelKeyMachineUpdateSuccessful)
-				patch := client.MergeFrom(node.DeepCopy())
-				metav1.SetMetaDataLabel(&node.ObjectMeta, machinev1alpha1.LabelKeyMachineUpdateSuccessful, "true")
-				if err := r.Client.Patch(ctx, node, patch); err != nil {
-					return reconcile.Result{}, fmt.Errorf("failed patching node with MCM label: %w", err)
-				}
-			} else {
-				log.Info("OS version mismatch, not labeling node with MCM label", "node", node.Name, "version", osVersion, "expectedVersion", ptr.Deref(osc.Spec.OSVersion, ""))
-			}
+	if isInPlaceUpdate(oscChanges) {
+		// List all pods running on the node and delete them.
+		podList := &corev1.PodList{}
+		if err := r.Client.List(ctx, podList, client.MatchingFields{"spec.nodeName": node.Name}); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed listing pods for node %s: %w", node.Name, err)
 		}
-	} else {
-		log.Info("Node is nil")
+
+		if err := kubernetesutils.DeleteObjectsFromListConditionally(ctx, r.Client, podList, func(obj runtime.Object) bool {
+			pod, ok := obj.(*corev1.Pod)
+			if !ok {
+				return false
+			}
+			return pod.Spec.NodeName == node.Name
+		}); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed deleting pods for node %s: %w", node.Name, err)
+		}
+
+		log.Info("Currently running OS version", "version", osVersion)
+		// If node is successfully updated with the new OS version, we must label the node with MCM label.
+		if node != nil {
+			if _, ok := node.Annotations[annotationUpdateOSVersion]; ok {
+				if osVersion == ptr.Deref(osc.Spec.OSVersion, "") {
+					log.Info("Updating OS version successful, version matches", "node", node.Name, "version", osVersion)
+					log.Info("Labeling node with MCM label", "node", node.Name, "label", machinev1alpha1.LabelKeyMachineUpdateSuccessful)
+					patch := client.MergeFrom(node.DeepCopy())
+					metav1.SetMetaDataLabel(&node.ObjectMeta, machinev1alpha1.LabelKeyMachineUpdateSuccessful, "true")
+					if err := r.Client.Patch(ctx, node, patch); err != nil {
+						return reconcile.Result{}, fmt.Errorf("failed patching node with MCM label: %w", err)
+					}
+				} else {
+					log.Info("OS version mismatch, not labeling node with MCM label", "node", node.Name, "version", osVersion, "expectedVersion", ptr.Deref(osc.Spec.OSVersion, ""))
+				}
+			}
+		} else {
+			log.Info("Node is nil")
+		}
 	}
 
 	log.Info("Persisting current operating system config as 'last-applied' file to the disk", "path", lastAppliedOperatingSystemConfigFilePath)
