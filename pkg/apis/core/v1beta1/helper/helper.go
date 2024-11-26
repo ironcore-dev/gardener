@@ -1621,3 +1621,10 @@ func sumQuantities(left, right *resource.Quantity) *resource.Quantity {
 	copy.Add(*right)
 	return &copy
 }
+
+func IsInPlaceUpdate(updateStrategy *gardencorev1beta1.MachineUpdateStrategy) bool {
+	if updateStrategy == nil {
+		return false
+	}
+	return *updateStrategy == gardencorev1beta1.InPlaceUpdate || *updateStrategy == gardencorev1beta1.InPlaceUpdateOnLabel
+}

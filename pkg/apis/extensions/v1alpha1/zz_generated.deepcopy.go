@@ -1993,6 +1993,11 @@ func (in *WorkerPool) DeepCopyInto(out *WorkerPool) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.KubeletConfig != nil {
+		in, out := &in.KubeletConfig, &out.KubeletConfig
+		*out = new(v1beta1.KubeletConfig)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.NodeTemplate != nil {
 		in, out := &in.NodeTemplate, &out.NodeTemplate
 		*out = new(NodeTemplate)

@@ -1016,20 +1016,23 @@ func KeyV2(
 		return ""
 	}
 
-	kubernetesMajorMinorVersion := fmt.Sprintf("%d.%d", kubernetesVersion.Major(), kubernetesVersion.Minor())
+	var (
+		inPlaceUpdate               = v1beta1helper.IsInPlaceUpdate(worker.UpdateStrategy)
+		kubernetesMajorMinorVersion = fmt.Sprintf("%d.%d", kubernetesVersion.Major(), kubernetesVersion.Minor())
+		data                        = []string{
+			kubernetesMajorMinorVersion,
+			worker.Machine.Type,
+			worker.Machine.Image.Name + *worker.Machine.Image.Version,
+		}
+	)
 
-	data := []string{
-		kubernetesMajorMinorVersion,
-		worker.Machine.Type,
-		// adapt this
-		worker.Machine.Image.Name,
+	// Do not change hash for kubernetes version, machine image versions if in place update
+	if inPlaceUpdate {
+		data = []string{
+			worker.Machine.Type,
+			worker.Machine.Image.Name,
+		}
 	}
-
-	// machineImageString := worker.Machine.Image.Name + *worker.Machine.Image.Version
-	// if worker.UpdateStrategy != nil && *worker.UpdateStrategy != gardencorev1beta1.InPlaceUpdate {
-	// 	machineImageString = worker.Machine.Image.Name
-	// }
-	// data = append(data, machineImageString)
 
 	if worker.Volume != nil {
 		data = append(data, worker.Volume.VolumeSize)
@@ -1042,7 +1045,8 @@ func KeyV2(
 		data = append(data, string(worker.CRI.Name))
 	}
 
-	if credentialsRotation != nil {
+	// Do not change hash for credentials rotation if in place update
+	if !inPlaceUpdate && credentialsRotation != nil {
 		if credentialsRotation.CertificateAuthorities != nil && credentialsRotation.CertificateAuthorities.LastInitiationTime != nil {
 			data = append(data, credentialsRotation.CertificateAuthorities.LastInitiationTime.Time.String())
 		}
@@ -1055,7 +1059,8 @@ func KeyV2(
 		data = append(data, "node-local-dns")
 	}
 
-	if kubeletConfiguration != nil {
+	// Do not change hash for kubelet configuration if in place update
+	if !inPlaceUpdate && kubeletConfiguration != nil {
 		if resources := v1beta1helper.SumResourceReservations(kubeletConfiguration.KubeReserved, kubeletConfiguration.SystemReserved); resources != nil {
 			data = append(data, fmt.Sprintf("%s-%s-%s-%s", resources.CPU, resources.Memory, resources.PID, resources.EphemeralStorage))
 		}

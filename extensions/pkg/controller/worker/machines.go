@@ -15,6 +15,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
@@ -97,7 +98,7 @@ func (m MachineDeployments) HasSecret(secretName string) bool {
 // WorkerPoolHash returns a hash value for a given worker pool and a given cluster resource.
 func WorkerPoolHash(pool extensionsv1alpha1.WorkerPool, cluster *extensionscontroller.Cluster, additionalDataV1 []string, additionalDataV2 []string) (string, error) {
 	if pool.NodeAgentSecretName != nil {
-		return WorkerPoolHashV2(*pool.NodeAgentSecretName, additionalDataV2...)
+		return WorkerPoolHashV2(*pool.NodeAgentSecretName, pool, cluster, additionalDataV2...)
 	}
 	return WorkerPoolHashV1(pool, cluster, additionalDataV1...)
 }
@@ -163,8 +164,56 @@ func WorkerPoolHashV1(pool extensionsv1alpha1.WorkerPool, cluster *extensionscon
 }
 
 // WorkerPoolHashV2 returns a hash value for a given nodeAgentSecretName and additional data.
-func WorkerPoolHashV2(nodeAgentSecretName string, additionalData ...string) (string, error) {
+func WorkerPoolHashV2(nodeAgentSecretName string, pool extensionsv1alpha1.WorkerPool, cluster *extensionscontroller.Cluster, additionalData ...string) (string, error) {
 	data := []string{nodeAgentSecretName}
+
+	if helper.IsInPlaceUpdate(pool.UpdateStrategy) {
+		kubernetesVersion := cluster.Shoot.Spec.Kubernetes.Version
+		if pool.KubernetesVersion != nil {
+			kubernetesVersion = *pool.KubernetesVersion
+		}
+		shootVersionMajorMinor, err := util.VersionMajorMinor(kubernetesVersion)
+		if err != nil {
+			return "", err
+		}
+
+		data = []string{
+			shootVersionMajorMinor,
+			pool.MachineImage.Version,
+		}
+
+		if status := cluster.Shoot.Status; status.Credentials != nil && status.Credentials.Rotation != nil {
+			if status.Credentials.Rotation.CertificateAuthorities != nil && status.Credentials.Rotation.CertificateAuthorities.LastInitiationTime != nil {
+				data = append(data, status.Credentials.Rotation.CertificateAuthorities.LastInitiationTime.Time.String())
+			}
+			if status.Credentials.Rotation.ServiceAccountKey != nil && status.Credentials.Rotation.ServiceAccountKey.LastInitiationTime != nil {
+				data = append(data, status.Credentials.Rotation.ServiceAccountKey.LastInitiationTime.Time.String())
+			}
+		}
+
+		kubeletConfiguration := cluster.Shoot.Spec.Kubernetes.Kubelet
+		if pool.KubeletConfig != nil {
+			kubeletConfiguration = pool.KubeletConfig
+		}
+
+		if kubeletConfiguration != nil {
+			if resources := helper.SumResourceReservations(kubeletConfiguration.KubeReserved, kubeletConfiguration.SystemReserved); resources != nil {
+				data = append(data, fmt.Sprintf("%s-%s-%s-%s", resources.CPU, resources.Memory, resources.PID, resources.EphemeralStorage))
+			}
+			if eviction := kubeletConfiguration.EvictionHard; eviction != nil {
+				data = append(data, fmt.Sprintf("%s-%s-%s-%s-%s",
+					ptr.Deref(eviction.ImageFSAvailable, ""),
+					ptr.Deref(eviction.ImageFSInodesFree, ""),
+					ptr.Deref(eviction.MemoryAvailable, ""),
+					ptr.Deref(eviction.NodeFSAvailable, ""),
+					ptr.Deref(eviction.NodeFSInodesFree, ""),
+				))
+			}
+			if policy := kubeletConfiguration.CPUManagerPolicy; policy != nil {
+				data = append(data, *policy)
+			}
+		}
+	}
 
 	data = append(data, additionalData...)
 

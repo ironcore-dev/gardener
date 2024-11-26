@@ -155,6 +155,9 @@ type WorkerPool struct {
 	// KubernetesVersion is the kubernetes version in this worker pool
 	// +optional
 	KubernetesVersion *string `json:"kubernetesVersion,omitempty"`
+	// KubeletConfig contains the kubelet configuration for the worker pool.
+	// +optional
+	KubeletConfig *gardencorev1beta1.KubeletConfig `json:"kubeletConfig,omitempty"`
 	// NodeTemplate contains resource information of the machine which is used by Cluster Autoscaler to generate nodeTemplate during scaling a nodeGroup from zero
 	// +optional
 	NodeTemplate *NodeTemplate `json:"nodeTemplate,omitempty"`

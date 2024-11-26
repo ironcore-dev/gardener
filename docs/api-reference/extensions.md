@@ -4840,6 +4840,20 @@ string
 </tr>
 <tr>
 <td>
+<code>kubeletConfig</code></br>
+<em>
+<a href="./core.md#core.gardener.cloud/v1beta1.KubeletConfig">
+github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>KubeletConfig contains the kubelet configuration for the worker pool.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>nodeTemplate</code></br>
 <em>
 <a href="#extensions.gardener.cloud/v1alpha1.NodeTemplate">
