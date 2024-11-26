@@ -919,9 +919,12 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 		d.osc.Spec.Files = files
 		d.osc.Spec.OSVersion = d.worker.Machine.Image.Version
 		d.osc.Spec.KubeletVersion = ptr.To(d.kubernetesVersion.String())
-		d.osc.Spec.CredentialsRotation = &extensionsv1alpha1.CredentialsRotation{
-			CARotationLastInitiationTime:                d.caRotationLastInitiationTime,
-			ServiceAccountKeyRotationLastInitiationTime: d.serviceAccountKeyRotationLastInitiationTime,
+
+		if d.caRotationLastInitiationTime != nil || d.serviceAccountKeyRotationLastInitiationTime != nil {
+			d.osc.Spec.CredentialsRotation = &extensionsv1alpha1.CredentialsRotation{
+				CARotationLastInitiationTime:                d.caRotationLastInitiationTime,
+				ServiceAccountKeyRotationLastInitiationTime: d.serviceAccountKeyRotationLastInitiationTime,
+			}
 		}
 
 		if d.worker.CRI != nil {
