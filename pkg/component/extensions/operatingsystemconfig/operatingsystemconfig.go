@@ -1017,7 +1017,8 @@ func KeyV2(
 	}
 
 	var (
-		inPlaceUpdate               = v1beta1helper.IsInPlaceUpdate(worker.UpdateStrategy)
+		// inPlaceUpdate               = v1beta1helper.IsInPlaceUpdate(worker.UpdateStrategy)
+		inPlaceUpdate               = true
 		kubernetesMajorMinorVersion = fmt.Sprintf("%d.%d", kubernetesVersion.Major(), kubernetesVersion.Minor())
 		data                        = []string{
 			kubernetesMajorMinorVersion,

@@ -167,7 +167,9 @@ func WorkerPoolHashV1(pool extensionsv1alpha1.WorkerPool, cluster *extensionscon
 func WorkerPoolHashV2(nodeAgentSecretName string, pool extensionsv1alpha1.WorkerPool, cluster *extensionscontroller.Cluster, additionalData ...string) (string, error) {
 	data := []string{nodeAgentSecretName}
 
-	if helper.IsInPlaceUpdate(pool.UpdateStrategy) {
+	// inPlaceUpdate := helper.IsInPlaceUpdate(pool.UpdateStrategy)
+	inPlaceUpdate := true
+	if inPlaceUpdate {
 		kubernetesVersion := cluster.Shoot.Spec.Kubernetes.Version
 		if pool.KubernetesVersion != nil {
 			kubernetesVersion = *pool.KubernetesVersion
