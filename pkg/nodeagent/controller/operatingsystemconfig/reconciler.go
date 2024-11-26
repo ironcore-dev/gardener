@@ -27,8 +27,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/client-go/tools/clientcmd"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
-	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -183,6 +184,19 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("failed reloading systemd daemon: %w", err)
 	}
 
+	// The containerd service stops as soon as units were removed that were required to run before (via containerd.service dropin).
+	// We want to start the service here explicitly (again) as a precautious measure.
+	log.Info("Starting containerd", "unitName", v1beta1constants.OperatingSystemConfigUnitNameContainerDService)
+	if err := r.DBus.Start(ctx, r.Recorder, node, v1beta1constants.OperatingSystemConfigUnitNameContainerDService); err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed starting containerd: %w", err)
+	}
+
+	log.Info("Executing unit commands (start/stop)")
+	mustRestartGardenerNodeAgent, err := r.executeUnitCommands(ctx, log, node, oscChanges)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed executing unit commands: %w", err)
+	}
+
 	if isInPlaceUpdate(oscChanges) {
 		if oscChanges.caRotation {
 			if err := r.rebootstrapKubelet(ctx, log, node); err != nil {
@@ -212,19 +226,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 				return reconcile.Result{}, fmt.Errorf("failed waiting for kubelet to become healthy after update: %w", err)
 			}
 		}
-	}
-
-	// The containerd service stops as soon as units were removed that were required to run before (via containerd.service dropin).
-	// We want to start the service here explicitly (again) as a precautious measure.
-	log.Info("Starting containerd", "unitName", v1beta1constants.OperatingSystemConfigUnitNameContainerDService)
-	if err := r.DBus.Start(ctx, r.Recorder, node, v1beta1constants.OperatingSystemConfigUnitNameContainerDService); err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed starting containerd: %w", err)
-	}
-
-	log.Info("Executing unit commands (start/stop)")
-	mustRestartGardenerNodeAgent, err := r.executeUnitCommands(ctx, log, node, oscChanges)
-	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed executing unit commands: %w", err)
 	}
 
 	// After the node is prepared, we can wait for the registries to be configured.
@@ -584,22 +585,6 @@ func (r *Reconciler) executeUnitCommands(ctx context.Context, log logr.Logger, n
 }
 
 func (r *Reconciler) rebootstrapKubelet(ctx context.Context, log logr.Logger, node *corev1.Node) error {
-	kubeConfigRaw, err := r.FS.ReadFile(kubelet.PathKubeconfigReal)
-	if err != nil {
-		if errors.Is(err, afero.ErrFileNotFound) {
-			return fmt.Errorf("kubeconfig file %q not found: %w", kubelet.PathKubeconfigReal, err)
-		}
-		return fmt.Errorf("failed checking whether kubeconfig file %q exists: %w", kubelet.PathKubeconfigReal, err)
-	}
-	kc, err := runtime.Decode(clientcmdlatest.Codec, kubeConfigRaw)
-	if err != nil {
-		return fmt.Errorf("unable to decode kubeconfig: %w", err)
-	}
-	kubeConfig, ok := kc.(*clientcmdv1.Config)
-	if !ok {
-		return fmt.Errorf("expected kubeconfig to be of type *clientcmdv1.Config, got %T", kc)
-	}
-
 	kubeletClientCertificatePath := filepath.Join(kubelet.PathKubeletDirectory, "pki", "kubelet-client-current.pem")
 	kubeletClientCertificate, err := r.FS.ReadFile(kubeletClientCertificatePath)
 	if err != nil {
@@ -617,15 +602,18 @@ func (r *Reconciler) rebootstrapKubelet(ctx context.Context, log logr.Logger, no
 		return fmt.Errorf("failed writing kubeconfig bootstrap file %q: %w", kubelet.PathKubeconfigBootstrap, err)
 	}
 
-	kubeConfig.AuthInfos = []clientcmdv1.NamedAuthInfo{
-		{
-			Name: "default-auth",
-			AuthInfo: clientcmdv1.AuthInfo{
-				ClientCertificate: tempKubeletClientCertificatePath,
-				ClientKey:         tempKubeletClientCertificatePath,
-			},
+	kubeConfig, err := clientcmd.LoadFromFile(kubelet.PathKubeconfigReal)
+	if err != nil {
+		return fmt.Errorf("unable to load kubeconfig: %w", err)
+	}
+
+	kubeConfig.AuthInfos = map[string]*clientcmdapi.AuthInfo{
+		"default-auth": &clientcmdapi.AuthInfo{
+			ClientCertificate: tempKubeletClientCertificatePath,
+			ClientKey:         tempKubeletClientCertificatePath,
 		},
 	}
+
 	kubeConfigTemp, err := runtime.Encode(clientcmdlatest.Codec, kubeConfig)
 	if err != nil {
 		return fmt.Errorf("unable to encode kubeconfig: %w", err)
