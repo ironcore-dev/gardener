@@ -29,7 +29,6 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
-	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -608,19 +607,23 @@ func (r *Reconciler) rebootstrapKubelet(ctx context.Context, log logr.Logger, no
 	}
 
 	kubeConfig.AuthInfos = map[string]*clientcmdapi.AuthInfo{
-		"default-auth": &clientcmdapi.AuthInfo{
+		"default-auth": {
 			ClientCertificate: tempKubeletClientCertificatePath,
 			ClientKey:         tempKubeletClientCertificatePath,
 		},
 	}
 
-	kubeConfigTemp, err := runtime.Encode(clientcmdlatest.Codec, kubeConfig)
-	if err != nil {
-		return fmt.Errorf("unable to encode kubeconfig: %w", err)
+	if err := clientcmd.WriteToFile(*kubeConfig, kubelet.PathKubeconfigBootstrap); err != nil {
+		return fmt.Errorf("unable to write kubeconfig: %w", err)
 	}
-	if err := r.FS.WriteFile(kubelet.PathKubeconfigBootstrap, kubeConfigTemp, 0600); err != nil {
-		return fmt.Errorf("failed writing kubeconfig bootstrap file %q: %w", kubelet.PathKubeconfigBootstrap, err)
-	}
+
+	// kubeConfigTemp, err := runtime.Encode(clientcmdlatest.Codec, kubeConfig)
+	// if err != nil {
+	// 	return fmt.Errorf("unable to encode kubeconfig: %w", err)
+	// }
+	// if err := r.FS.WriteFile(kubelet.PathKubeconfigBootstrap, kubeConfigTemp, 0600); err != nil {
+	// 	return fmt.Errorf("failed writing kubeconfig bootstrap file %q: %w", kubelet.PathKubeconfigBootstrap, err)
+	// }
 
 	kubeletClientCertificateDir := filepath.Join(kubelet.PathKubeletDirectory, "pki")
 	if err := r.FS.RemoveAll(kubeletClientCertificateDir); err != nil && !errors.Is(err, afero.ErrFileNotFound) {
