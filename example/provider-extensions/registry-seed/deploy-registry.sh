@@ -87,9 +87,6 @@ stringData:
   start-seed-registry-cache.conf: |
     [Service]\n
     ExecStartPre=bash /var/opt/docker/start-seed-registry-cache.sh\n
-  stop-seed-registry-cache.conf: |
-    [Service]\n
-    ExecStopPost=bash /var/opt/docker/stop-seed-registry-cache.sh\n
   start-seed-registry-cache.sh: |
     #!/usr/bin/env bash
     if [[ "\$(ctr task ls | grep seed-registry-cache | awk '{print \$3}')" == "RUNNING" ]]; then
@@ -110,12 +107,6 @@ stringData:
     ctr image pull europe-docker.pkg.dev/gardener-project/releases/3rd/registry:3.0.0-beta.1
     echo "Starting registry-cache"
     ctr run --detach --mount type=bind,src=/var/opt/docker/seed-registry-cache-config.yml,dst=/etc/distribution/config.yml,options=rbind:ro --net-host europe-docker.pkg.dev/gardener-project/releases/3rd/registry:3.0.0-beta.1 seed-registry-cache
-  stop-seed-registry-cache.sh: |
-    #!/usr/bin/env bash
-    echo "stopping seed-registry-cache"
-    ctr task kill seed-registry-cache
-    ctr task rm seed-registry-cache
-    ctr container rm seed-registry-cache
 EOF
 
 echo "Creating pull secret in garden namespace"
