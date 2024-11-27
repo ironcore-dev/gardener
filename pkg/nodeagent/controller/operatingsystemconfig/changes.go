@@ -158,6 +158,7 @@ func computeOperatingSystemConfigChanges(fs afero.Afero, newOSC *extensionsv1alp
 	}
 
 	// TODO: replace with ptr.Equal
+	// TODO: Add logic to decide if it's minor/patch version
 	if oldOSC.Spec.KubeletVersion != nil && newOSC.Spec.KubeletVersion != nil && *oldOSC.Spec.KubeletVersion != *newOSC.Spec.KubeletVersion {
 		changes.kubeletUpdate.minorVersionUpdate = true
 	}

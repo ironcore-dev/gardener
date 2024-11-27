@@ -204,6 +204,11 @@ func run(ctx context.Context, cancel context.CancelFunc, log logr.Logger, cfg *c
 		return err
 	}
 
+	log.Info("Adding field indexes to informers")
+	if err := addAllFieldIndexes(ctx, mgr.GetFieldIndexer()); err != nil {
+		return fmt.Errorf("failed adding indexes: %w", err)
+	}
+
 	log.Info("Creating directory for temporary files", "path", nodeagentv1alpha1.TempDir)
 	fs := afero.Afero{Fs: afero.NewOsFs()}
 	if err := fs.MkdirAll(nodeagentv1alpha1.TempDir, os.ModeDir); err != nil {
@@ -304,4 +309,17 @@ func fetchNodeName(ctx context.Context, restConfig *rest.Config, hostName string
 	}
 
 	return node.Name, nil
+}
+
+func addAllFieldIndexes(ctx context.Context, i client.FieldIndexer) error {
+	for _, fn := range []func(context.Context, client.FieldIndexer) error{
+		// core/v1 API group
+		indexer.AddPodNodeName,
+	} {
+		if err := fn(ctx, i); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

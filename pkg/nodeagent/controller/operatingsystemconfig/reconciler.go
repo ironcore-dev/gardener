@@ -35,6 +35,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/gardener/gardener/pkg/api/indexer"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
@@ -249,8 +250,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	if isInPlaceUpdate(oscChanges) {
 		// List all pods running on the node and delete them.
+		log.Info("Deleting pods running on the node", "node", node.Name)
 		podList := &corev1.PodList{}
-		if err := r.Client.List(ctx, podList, client.MatchingFields{"spec.nodeName": node.Name}); err != nil {
+		if err := r.Client.List(ctx, podList, client.MatchingFields{indexer.PodNodeName: node.Name}); err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed listing pods for node %s: %w", node.Name, err)
 		}
 
@@ -584,46 +586,29 @@ func (r *Reconciler) executeUnitCommands(ctx context.Context, log logr.Logger, n
 }
 
 func (r *Reconciler) rebootstrapKubelet(ctx context.Context, log logr.Logger, node *corev1.Node) error {
+	log.Info("Rebootstrapping kubelet after CA rotation", "node", node.Name)
+
 	kubeletClientCertificatePath := filepath.Join(kubelet.PathKubeletDirectory, "pki", "kubelet-client-current.pem")
 	kubeletClientCertificate, err := r.FS.ReadFile(kubeletClientCertificatePath)
-	if err != nil {
-		if errors.Is(err, afero.ErrFileNotFound) {
-			return fmt.Errorf("kubelet client certificate file %q not found: %w", kubeletClientCertificatePath, err)
-		}
+	if err != nil && !errors.Is(err, afero.ErrFileNotFound) {
 		return fmt.Errorf("failed checking whether kubelet client certificate file %q exists: %w", kubeletClientCertificatePath, err)
 	}
 
-	tempKubeletClientCertificatePath := filepath.Join(kubelet.PathKubeletDirectory, "pki", "temp", "kubelet-client-current.pem")
-	if err := r.FS.MkdirAll(filepath.Join(kubelet.PathKubeletDirectory, "pki", "temp"), os.ModeDir); err != nil {
-		return fmt.Errorf("unable to create temp kubelet client certificate directory %q: %w", filepath.Join(kubelet.PathKubeletDirectory, "pki", "temp"), err)
-	}
-	if err := r.FS.WriteFile(tempKubeletClientCertificatePath, kubeletClientCertificate, 0600); err != nil {
-		return fmt.Errorf("failed writing kubeconfig bootstrap file %q: %w", kubelet.PathKubeconfigBootstrap, err)
-	}
-
 	kubeConfig, err := clientcmd.LoadFromFile(kubelet.PathKubeconfigReal)
-	if err != nil {
+	if err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("unable to load kubeconfig: %w", err)
-	}
+	} else if err == nil {
+		kubeConfig.AuthInfos = map[string]*clientcmdapi.AuthInfo{
+			"default-auth": {
+				ClientCertificateData: kubeletClientCertificate,
+				ClientKeyData:         kubeletClientCertificate,
+			},
+		}
 
-	kubeConfig.AuthInfos = map[string]*clientcmdapi.AuthInfo{
-		"default-auth": {
-			ClientCertificate: tempKubeletClientCertificatePath,
-			ClientKey:         tempKubeletClientCertificatePath,
-		},
+		if err := clientcmd.WriteToFile(*kubeConfig, kubelet.PathKubeconfigBootstrap); err != nil {
+			return fmt.Errorf("unable to write kubeconfig: %w", err)
+		}
 	}
-
-	if err := clientcmd.WriteToFile(*kubeConfig, kubelet.PathKubeconfigBootstrap); err != nil {
-		return fmt.Errorf("unable to write kubeconfig: %w", err)
-	}
-
-	// kubeConfigTemp, err := runtime.Encode(clientcmdlatest.Codec, kubeConfig)
-	// if err != nil {
-	// 	return fmt.Errorf("unable to encode kubeconfig: %w", err)
-	// }
-	// if err := r.FS.WriteFile(kubelet.PathKubeconfigBootstrap, kubeConfigTemp, 0600); err != nil {
-	// 	return fmt.Errorf("failed writing kubeconfig bootstrap file %q: %w", kubelet.PathKubeconfigBootstrap, err)
-	// }
 
 	kubeletClientCertificateDir := filepath.Join(kubelet.PathKubeletDirectory, "pki")
 	if err := r.FS.RemoveAll(kubeletClientCertificateDir); err != nil && !errors.Is(err, afero.ErrFileNotFound) {
@@ -637,11 +622,7 @@ func (r *Reconciler) rebootstrapKubelet(ctx context.Context, log logr.Logger, no
 		return fmt.Errorf("unable to restart unit %q: %w", kubeletUnitName, err)
 	}
 
-	if err := r.FS.RemoveAll(tempKubeletClientCertificatePath); err != nil && !errors.Is(err, afero.ErrFileNotFound) {
-		return fmt.Errorf("unable to delete temp kubelet client certificate directory %q: %w", tempKubeletClientCertificatePath, err)
-	}
-
-	log.Info("Successfully restarted kubelet after CA rotation")
+	log.Info("Successfully restarted kubelet after CA rotation", "node", node.Name)
 	return nil
 }
 
