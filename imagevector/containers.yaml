@@ -136,7 +136,7 @@ images:
 - name: machine-controller-manager
   sourceRepository: github.com/gardener/machine-controller-manager
   repository: shafeeqes/machine-controller-manager
-  tag: v0.55.5-dev
+  tag: v0.56.0-dev
   labels:
   - name: gardener.cloud/cve-categorisation
     value:
