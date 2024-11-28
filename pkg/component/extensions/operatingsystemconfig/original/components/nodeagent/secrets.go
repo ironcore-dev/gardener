@@ -41,6 +41,7 @@ func OperatingSystemConfigSecret(
 			OSVersion:           osc.Spec.OSVersion,
 			KubeletVersion:      osc.Spec.KubeletVersion,
 			CredentialsRotation: osc.Spec.CredentialsRotation,
+			KubeletConfigHash:   osc.Spec.KubeletConfigHash,
 		},
 		Status: extensionsv1alpha1.OperatingSystemConfigStatus{
 			ExtensionUnits:      osc.Status.ExtensionUnits,

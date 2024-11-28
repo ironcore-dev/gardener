@@ -16,6 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
+	kubeletconfigv1beta1 "k8s.io/kubelet/config/v1beta1"
 	"k8s.io/utils/ptr"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -29,6 +30,7 @@ var decoder runtime.Decoder
 func init() {
 	scheme := runtime.NewScheme()
 	utilruntime.Must(extensionsv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(kubeletconfigv1beta1.AddToScheme(scheme))
 	decoder = serializer.NewCodecFactory(scheme).UniversalDeserializer()
 }
 
@@ -163,6 +165,10 @@ func computeOperatingSystemConfigChanges(fs afero.Afero, newOSC *extensionsv1alp
 		changes.kubeletUpdate.minorVersionUpdate = true
 	}
 
+	if newOSC.Spec.KubeletConfigHash != oldOSC.Spec.KubeletConfigHash {
+		changes.kubeletUpdate.configUpdate = true
+	}
+
 	if newOSC.Spec.CredentialsRotation != nil {
 		// Rotation is triggered for the first time
 		if oldOSC.Spec.CredentialsRotation == nil {
@@ -173,8 +179,6 @@ func computeOperatingSystemConfigChanges(fs afero.Afero, newOSC *extensionsv1alp
 			changes.saKeyRotation = !ptr.Equal(oldOSC.Spec.CredentialsRotation.ServiceAccountKeyRotationLastInitiationTime, newOSC.Spec.CredentialsRotation.ServiceAccountKeyRotationLastInitiationTime)
 		}
 	}
-
-	// TODO: consider kubelet config change as well
 
 	var (
 		newRegistries []extensionsv1alpha1.RegistryConfig

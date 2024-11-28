@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -17,6 +18,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/apimachinery/pkg/runtime/serializer/json"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -61,13 +67,26 @@ const (
 	poolHashesDataKey = "pools"
 )
 
-// LatestHashVersion is the latest version support for calculateKeyVersion. Exposed for testing.
-var LatestHashVersion = func() int {
-	// WorkerPoolHash is behind feature gate as extensions must be updated first
-	if features.DefaultFeatureGate.Enabled(features.NewWorkerPoolHash) {
-		return 2
+var (
+	// LatestHashVersion is the latest version support for calculateKeyVersion. Exposed for testing.
+	LatestHashVersion = func() int {
+		// WorkerPoolHash is behind feature gate as extensions must be updated first
+		if features.DefaultFeatureGate.Enabled(features.NewWorkerPoolHash) {
+			return 2
+		}
+		return 1
 	}
-	return 1
+
+	codec runtime.Codec
+)
+
+func init() {
+	scheme := runtime.NewScheme()
+	utilruntime.Must(gardencorev1beta1.AddToScheme(scheme))
+
+	ser := json.NewSerializerWithOptions(json.DefaultMetaFactory, scheme, scheme, json.SerializerOptions{Yaml: true, Pretty: false, Strict: false})
+	versions := schema.GroupVersions([]schema.GroupVersion{gardencorev1beta1.SchemeGroupVersion})
+	codec = serializer.NewCodecFactory(scheme).CodecForVersions(ser, ser, versions, versions)
 }
 
 // TimeNow returns the current time. Exposed for testing.
@@ -927,6 +946,12 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 			}
 		}
 
+		if d.worker.Kubernetes != nil && d.worker.Kubernetes.Kubelet != nil {
+			kubeletConfigDataString := CalculateDataStringForKubeletConfiguration(d.worker.Kubernetes.Kubelet)
+			kubeletConfigHash := utils.ComputeSHA256Hex([]byte(strings.Join(kubeletConfigDataString, "-")))[:16]
+			d.osc.Spec.KubeletConfigHash = &kubeletConfigHash
+		}
+
 		if d.worker.CRI != nil {
 			d.osc.Spec.CRIConfig = &extensionsv1alpha1.CRIConfig{
 				Name: extensionsv1alpha1.CRIName(d.worker.CRI.Name),
@@ -1065,21 +1090,7 @@ func KeyV2(
 
 	// Do not change hash for kubelet configuration if in place update
 	if !inPlaceUpdate && kubeletConfiguration != nil {
-		if resources := v1beta1helper.SumResourceReservations(kubeletConfiguration.KubeReserved, kubeletConfiguration.SystemReserved); resources != nil {
-			data = append(data, fmt.Sprintf("%s-%s-%s-%s", resources.CPU, resources.Memory, resources.PID, resources.EphemeralStorage))
-		}
-		if eviction := kubeletConfiguration.EvictionHard; eviction != nil {
-			data = append(data, fmt.Sprintf("%s-%s-%s-%s-%s",
-				ptr.Deref(eviction.ImageFSAvailable, ""),
-				ptr.Deref(eviction.ImageFSInodesFree, ""),
-				ptr.Deref(eviction.MemoryAvailable, ""),
-				ptr.Deref(eviction.NodeFSAvailable, ""),
-				ptr.Deref(eviction.NodeFSInodesFree, ""),
-			))
-		}
-		if policy := kubeletConfiguration.CPUManagerPolicy; policy != nil {
-			data = append(data, *policy)
-		}
+		data = append(data, CalculateDataStringForKubeletConfiguration(kubeletConfiguration)...)
 	}
 
 	var result string
@@ -1103,4 +1114,26 @@ func keySuffix(version int, machineImageName string, purpose extensionsv1alpha1.
 		return imagePrefix + "-original"
 	}
 	return ""
+}
+
+func CalculateDataStringForKubeletConfiguration(kubeletConfiguration *gardencorev1beta1.KubeletConfig) []string {
+	data := []string{}
+
+	if resources := v1beta1helper.SumResourceReservations(kubeletConfiguration.KubeReserved, kubeletConfiguration.SystemReserved); resources != nil {
+		data = append(data, fmt.Sprintf("%s-%s-%s-%s", resources.CPU, resources.Memory, resources.PID, resources.EphemeralStorage))
+	}
+	if eviction := kubeletConfiguration.EvictionHard; eviction != nil {
+		data = append(data, fmt.Sprintf("%s-%s-%s-%s-%s",
+			ptr.Deref(eviction.ImageFSAvailable, ""),
+			ptr.Deref(eviction.ImageFSInodesFree, ""),
+			ptr.Deref(eviction.MemoryAvailable, ""),
+			ptr.Deref(eviction.NodeFSAvailable, ""),
+			ptr.Deref(eviction.NodeFSInodesFree, ""),
+		))
+	}
+	if policy := kubeletConfiguration.CPUManagerPolicy; policy != nil {
+		data = append(data, *policy)
+	}
+
+	return data
 }
