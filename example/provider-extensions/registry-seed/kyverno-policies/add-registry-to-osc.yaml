@@ -37,6 +37,10 @@ spec:
       apiCall:
         urlPath: "/api/v1/namespaces/registry/secrets/registry-cache-config"
         jmesPath: 'data."start-seed-registry-cache.sh"'
+    - name: stopScript
+      apiCall:
+        urlPath: "/api/v1/namespaces/registry/secrets/registry-cache-config"
+        jmesPath: 'data."stop-seed-registry-cache.sh"'
     preconditions:
       all:
       - key: "{{ request.object.spec.files[0].path || '' }}"
@@ -48,6 +52,9 @@ spec:
       - key: "{{ request.object.spec.files[2].path || '' }}"
         operator: NotEquals
         value: "/var/opt/docker/start-seed-registry-cache.sh"
+      - key: "{{ request.object.spec.files[3].path || '' }}"
+        operator: NotEquals
+        value: "/var/opt/docker/stop-seed-registry-cache.sh"
     mutate:
       patchesJson6902: |-
         - path: "/spec/files/0"
@@ -59,6 +66,9 @@ spec:
         - path: "/spec/files/2"
           op: add
           value: {"content":{"inline":{"data":"{{startScript}}","encoding":"b64"}},"path":"/var/opt/docker/start-seed-registry-cache.sh","permissions":0750}
+        - path: "/spec/files/3"
+          op: add
+          value: {"content":{"inline":{"data":"{{stopScript}}","encoding":"b64"}},"path":"/var/opt/docker/stop-seed-registry-cache.sh","permissions":0750}
   - name: add-seed-registry-cache-dropin
     match:
       all:
@@ -74,6 +84,10 @@ spec:
       apiCall:
         urlPath: "/api/v1/namespaces/registry/secrets/registry-cache-config"
         jmesPath: 'data."start-seed-registry-cache.conf"'
+    - name: stopDropIn
+      apiCall:
+        urlPath: "/api/v1/namespaces/registry/secrets/registry-cache-config"
+        jmesPath: 'data."stop-seed-registry-cache.conf"'
     mutate:
       foreach:
       - list: "request.object.spec.units[]"
@@ -86,6 +100,9 @@ spec:
             operator: Equals
             value: ""
         patchesJson6902: |-
+          - path: "/spec/units/{{elementIndex}}/dropIns"
+            op: add
+            value: [{"name":"start-seed-registry-cache.conf","content":"{{startDropIn|base64_decode(@)}}"},{"name":"stop-seed-registry-cache.conf","content":"{{stopDropIn|base64_decode(@)}}"}]
           - path: "/spec/units/{{elementIndex}}/filePaths/-"
             op: add
             value: "/var/opt/docker/seed-registry-cache-config.yml"
@@ -95,6 +112,9 @@ spec:
           - path: "/spec/units/{{elementIndex}}/filePaths/-"
             op: add
             value: "/var/opt/docker/start-seed-registry-cache.sh"
+          - path: "/spec/units/{{elementIndex}}/filePaths/-"
+            op: add
+            value: "/var/opt/docker/stop-seed-registry-cache.sh"
       - list: "request.object.spec.units[]"
         preconditions:
           all:
