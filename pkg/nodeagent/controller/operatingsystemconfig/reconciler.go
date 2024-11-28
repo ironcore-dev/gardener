@@ -266,25 +266,26 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 			return reconcile.Result{}, fmt.Errorf("failed deleting pods for node %s: %w", node.Name, err)
 		}
 
-		log.Info("Currently running OS version", "version", osVersion)
-		// If node is successfully updated with the new OS version, we must label the node with MCM label.
-		if node != nil {
-			if _, ok := node.Annotations[annotationUpdateOSVersion]; ok {
-				if osVersion == ptr.Deref(osc.Spec.OSVersion, "") {
-					log.Info("Updating OS version successful, version matches", "node", node.Name, "version", osVersion)
-					log.Info("Labeling node with MCM label", "node", node.Name, "label", machinev1alpha1.LabelKeyMachineUpdateSuccessful)
-					patch := client.MergeFrom(node.DeepCopy())
-					metav1.SetMetaDataLabel(&node.ObjectMeta, machinev1alpha1.LabelKeyMachineUpdateSuccessful, "true")
-					if err := r.Client.Patch(ctx, node, patch); err != nil {
-						return reconcile.Result{}, fmt.Errorf("failed patching node with MCM label: %w", err)
-					}
-				} else {
-					log.Info("OS version mismatch, not labeling node with MCM label", "node", node.Name, "version", osVersion, "expectedVersion", ptr.Deref(osc.Spec.OSVersion, ""))
+	}
+
+	log.Info("Currently running OS version", "version", osVersion)
+	// If node is successfully updated with the new OS version, we must label the node with MCM label.
+	if node != nil {
+		if _, ok := node.Annotations[annotationUpdateOSVersion]; ok {
+			if osVersion == ptr.Deref(osc.Spec.OSVersion, "") {
+				log.Info("Updating OS version successful, version matches", "node", node.Name, "version", osVersion)
+				log.Info("Labeling node with MCM label", "node", node.Name, "label", machinev1alpha1.LabelKeyMachineUpdateSuccessful)
+				patch := client.MergeFrom(node.DeepCopy())
+				metav1.SetMetaDataLabel(&node.ObjectMeta, machinev1alpha1.LabelKeyMachineUpdateSuccessful, "true")
+				if err := r.Client.Patch(ctx, node, patch); err != nil {
+					return reconcile.Result{}, fmt.Errorf("failed patching node with MCM label: %w", err)
 				}
+			} else {
+				log.Info("OS version mismatch, not labeling node with MCM label", "node", node.Name, "version", osVersion, "expectedVersion", ptr.Deref(osc.Spec.OSVersion, ""))
 			}
-		} else {
-			log.Info("Node is nil")
 		}
+	} else {
+		log.Info("Node is nil")
 	}
 
 	log.Info("Persisting current operating system config as 'last-applied' file to the disk", "path", lastAppliedOperatingSystemConfigFilePath)
