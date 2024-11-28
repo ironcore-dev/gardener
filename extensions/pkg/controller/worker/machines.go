@@ -15,7 +15,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
@@ -23,6 +22,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/gardener/shootstate"
 )
@@ -197,23 +197,8 @@ func WorkerPoolHashV2(nodeAgentSecretName string, pool extensionsv1alpha1.Worker
 		if pool.KubeletConfig != nil {
 			kubeletConfiguration = pool.KubeletConfig
 		}
-
 		if kubeletConfiguration != nil {
-			if resources := helper.SumResourceReservations(kubeletConfiguration.KubeReserved, kubeletConfiguration.SystemReserved); resources != nil {
-				data = append(data, fmt.Sprintf("%s-%s-%s-%s", resources.CPU, resources.Memory, resources.PID, resources.EphemeralStorage))
-			}
-			if eviction := kubeletConfiguration.EvictionHard; eviction != nil {
-				data = append(data, fmt.Sprintf("%s-%s-%s-%s-%s",
-					ptr.Deref(eviction.ImageFSAvailable, ""),
-					ptr.Deref(eviction.ImageFSInodesFree, ""),
-					ptr.Deref(eviction.MemoryAvailable, ""),
-					ptr.Deref(eviction.NodeFSAvailable, ""),
-					ptr.Deref(eviction.NodeFSInodesFree, ""),
-				))
-			}
-			if policy := kubeletConfiguration.CPUManagerPolicy; policy != nil {
-				data = append(data, *policy)
-			}
+			data = append(data, operatingsystemconfig.CalculateDataStringForKubeletConfiguration(kubeletConfiguration)...)
 		}
 	}
 
