@@ -165,7 +165,7 @@ func computeOperatingSystemConfigChanges(fs afero.Afero, newOSC *extensionsv1alp
 		changes.kubeletUpdate.minorVersionUpdate = true
 	}
 
-	if newOSC.Spec.KubeletConfigHash != oldOSC.Spec.KubeletConfigHash {
+	if newOSC.Spec.KubeletConfigHash != nil && oldOSC.Spec.KubeletConfigHash != nil && *oldOSC.Spec.KubeletConfigHash != *newOSC.Spec.KubeletConfigHash {
 		changes.kubeletUpdate.configUpdate = true
 	}
 
