@@ -45,10 +45,11 @@ func AddToManager(ctx context.Context, cancel context.CancelFunc, mgr manager.Ma
 	}
 
 	if err := (&operatingsystemconfig.Reconciler{
-		Config:        cfg.Controllers.OperatingSystemConfig,
-		HostName:      hostName,
-		NodeName:      nodeName,
-		CancelContext: cancel,
+		Config:          cfg.Controllers.OperatingSystemConfig,
+		APIServerConfig: cfg.APIServer,
+		HostName:        hostName,
+		NodeName:        nodeName,
+		CancelContext:   cancel,
 	}).AddToManager(ctx, mgr); err != nil {
 		return fmt.Errorf("failed adding operating system config controller: %w", err)
 	}

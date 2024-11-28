@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -17,6 +18,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/apimachinery/pkg/runtime/serializer/json"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -61,13 +67,26 @@ const (
 	poolHashesDataKey = "pools"
 )
 
-// LatestHashVersion is the latest version support for calculateKeyVersion. Exposed for testing.
-var LatestHashVersion = func() int {
-	// WorkerPoolHash is behind feature gate as extensions must be updated first
-	if features.DefaultFeatureGate.Enabled(features.NewWorkerPoolHash) {
-		return 2
+var (
+	// LatestHashVersion is the latest version support for calculateKeyVersion. Exposed for testing.
+	LatestHashVersion = func() int {
+		// WorkerPoolHash is behind feature gate as extensions must be updated first
+		if features.DefaultFeatureGate.Enabled(features.NewWorkerPoolHash) {
+			return 2
+		}
+		return 1
 	}
-	return 1
+
+	codec runtime.Codec
+)
+
+func init() {
+	scheme := runtime.NewScheme()
+	utilruntime.Must(gardencorev1beta1.AddToScheme(scheme))
+
+	ser := json.NewSerializerWithOptions(json.DefaultMetaFactory, scheme, scheme, json.SerializerOptions{Yaml: true, Pretty: false, Strict: false})
+	versions := schema.GroupVersions([]schema.GroupVersion{gardencorev1beta1.SchemeGroupVersion})
+	codec = serializer.NewCodecFactory(scheme).CodecForVersions(ser, ser, versions, versions)
 }
 
 // TimeNow returns the current time. Exposed for testing.
@@ -718,34 +737,49 @@ func (o *operatingSystemConfig) newDeployer(version int, osc *extensionsv1alpha1
 		return deployer{}, err
 	}
 
+	var (
+		caRotationLastInitiationTime, serviceAccountKeyRotationLastInitiationTime *string
+	)
+
+	if o.values.CredentialsRotationStatus != nil {
+		if o.values.CredentialsRotationStatus.CertificateAuthorities != nil {
+			caRotationLastInitiationTime = ptr.To(o.values.CredentialsRotationStatus.CertificateAuthorities.LastInitiationTime.String())
+		}
+		if o.values.CredentialsRotationStatus.ServiceAccountKey != nil {
+			serviceAccountKeyRotationLastInitiationTime = ptr.To(o.values.CredentialsRotationStatus.ServiceAccountKey.LastInitiationTime.String())
+		}
+	}
+
 	return deployer{
-		client:                  o.client,
-		osc:                     osc,
-		worker:                  worker,
-		purpose:                 purpose,
-		key:                     oscKey,
-		apiServerURL:            o.values.APIServerURL,
-		caBundle:                caBundle,
-		clusterCASecretName:     clusterCASecret.Name,
-		clusterCABundle:         clusterCASecret.Data[secretsutils.DataKeyCertificateBundle],
-		clusterDNSAddresses:     o.values.ClusterDNSAddresses,
-		clusterDomain:           o.values.ClusterDomain,
-		criName:                 criName,
-		images:                  images,
-		kubeletCABundle:         kubeletCASecret.Data[secretsutils.DataKeyCertificateBundle],
-		kubeletConfigParameters: kubeletConfigParameters,
-		kubeletCLIFlags:         kubeletCLIFlags,
-		kubeletDataVolumeName:   worker.KubeletDataVolumeName,
-		kubeProxyEnabled:        o.values.KubeProxyEnabled,
-		kubernetesVersion:       kubernetesVersion,
-		sshPublicKeys:           o.values.SSHPublicKeys,
-		sshAccessEnabled:        o.values.SSHAccessEnabled,
-		valiIngressHostName:     o.values.ValiIngressHostName,
-		valitailEnabled:         o.values.ValitailEnabled,
-		nodeMonitorGracePeriod:  o.values.NodeMonitorGracePeriod,
-		nodeLocalDNSEnabled:     o.values.NodeLocalDNSEnabled,
-		primaryIPFamily:         o.values.PrimaryIPFamily,
-		taints:                  worker.Taints,
+		client:                       o.client,
+		osc:                          osc,
+		worker:                       worker,
+		purpose:                      purpose,
+		key:                          oscKey,
+		apiServerURL:                 o.values.APIServerURL,
+		caBundle:                     caBundle,
+		clusterCASecretName:          clusterCASecret.Name,
+		clusterCABundle:              clusterCASecret.Data[secretsutils.DataKeyCertificateBundle],
+		clusterDNSAddresses:          o.values.ClusterDNSAddresses,
+		clusterDomain:                o.values.ClusterDomain,
+		criName:                      criName,
+		images:                       images,
+		kubeletCABundle:              kubeletCASecret.Data[secretsutils.DataKeyCertificateBundle],
+		kubeletConfigParameters:      kubeletConfigParameters,
+		kubeletCLIFlags:              kubeletCLIFlags,
+		kubeletDataVolumeName:        worker.KubeletDataVolumeName,
+		kubeProxyEnabled:             o.values.KubeProxyEnabled,
+		kubernetesVersion:            kubernetesVersion,
+		sshPublicKeys:                o.values.SSHPublicKeys,
+		sshAccessEnabled:             o.values.SSHAccessEnabled,
+		valiIngressHostName:          o.values.ValiIngressHostName,
+		valitailEnabled:              o.values.ValitailEnabled,
+		nodeMonitorGracePeriod:       o.values.NodeMonitorGracePeriod,
+		nodeLocalDNSEnabled:          o.values.NodeLocalDNSEnabled,
+		primaryIPFamily:              o.values.PrimaryIPFamily,
+		taints:                       worker.Taints,
+		caRotationLastInitiationTime: caRotationLastInitiationTime,
+		serviceAccountKeyRotationLastInitiationTime: serviceAccountKeyRotationLastInitiationTime,
 	}, nil
 }
 
@@ -791,27 +825,29 @@ type deployer struct {
 	apiServerURL string
 
 	// original values
-	caBundle                *string
-	clusterCASecretName     string
-	clusterCABundle         []byte
-	clusterDNSAddresses     []string
-	clusterDomain           string
-	criName                 extensionsv1alpha1.CRIName
-	images                  map[string]*imagevectorutils.Image
-	kubeletCABundle         []byte
-	kubeletConfigParameters components.ConfigurableKubeletConfigParameters
-	kubeletCLIFlags         components.ConfigurableKubeletCLIFlags
-	kubeletDataVolumeName   *string
-	kubeProxyEnabled        bool
-	kubernetesVersion       *semver.Version
-	sshPublicKeys           []string
-	sshAccessEnabled        bool
-	valiIngressHostName     string
-	valitailEnabled         bool
-	nodeLocalDNSEnabled     bool
-	nodeMonitorGracePeriod  metav1.Duration
-	primaryIPFamily         gardencorev1beta1.IPFamily
-	taints                  []corev1.Taint
+	caBundle                                    *string
+	clusterCASecretName                         string
+	clusterCABundle                             []byte
+	clusterDNSAddresses                         []string
+	clusterDomain                               string
+	criName                                     extensionsv1alpha1.CRIName
+	images                                      map[string]*imagevectorutils.Image
+	kubeletCABundle                             []byte
+	kubeletConfigParameters                     components.ConfigurableKubeletConfigParameters
+	kubeletCLIFlags                             components.ConfigurableKubeletCLIFlags
+	kubeletDataVolumeName                       *string
+	kubeProxyEnabled                            bool
+	kubernetesVersion                           *semver.Version
+	sshPublicKeys                               []string
+	sshAccessEnabled                            bool
+	valiIngressHostName                         string
+	valitailEnabled                             bool
+	nodeLocalDNSEnabled                         bool
+	nodeMonitorGracePeriod                      metav1.Duration
+	primaryIPFamily                             gardencorev1beta1.IPFamily
+	taints                                      []corev1.Taint
+	caRotationLastInitiationTime                *string
+	serviceAccountKeyRotationLastInitiationTime *string
 }
 
 // exposed for testing
@@ -902,6 +938,21 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 		d.osc.Spec.Purpose = d.purpose
 		d.osc.Spec.Units = units
 		d.osc.Spec.Files = files
+		d.osc.Spec.OSVersion = d.worker.Machine.Image.Version
+		d.osc.Spec.KubeletVersion = ptr.To(d.kubernetesVersion.String())
+
+		if d.caRotationLastInitiationTime != nil || d.serviceAccountKeyRotationLastInitiationTime != nil {
+			d.osc.Spec.CredentialsRotation = &extensionsv1alpha1.CredentialsRotation{
+				CARotationLastInitiationTime:                d.caRotationLastInitiationTime,
+				ServiceAccountKeyRotationLastInitiationTime: d.serviceAccountKeyRotationLastInitiationTime,
+			}
+		}
+
+		if d.worker.Kubernetes != nil && d.worker.Kubernetes.Kubelet != nil {
+			kubeletConfigDataString := CalculateDataStringForKubeletConfiguration(d.worker.Kubernetes.Kubelet)
+			kubeletConfigHash := utils.ComputeSHA256Hex([]byte(strings.Join(kubeletConfigDataString, "-")))[:16]
+			d.osc.Spec.KubeletConfigHash = &kubeletConfigHash
+		}
 
 		if d.worker.CRI != nil {
 			d.osc.Spec.CRIConfig = &extensionsv1alpha1.CRIConfig{
@@ -995,12 +1046,22 @@ func KeyV2(
 		return ""
 	}
 
-	kubernetesMajorMinorVersion := fmt.Sprintf("%d.%d", kubernetesVersion.Major(), kubernetesVersion.Minor())
+	var (
+		inPlaceUpdate               = v1beta1helper.IsInPlaceUpdate(worker.UpdateStrategy)
+		kubernetesMajorMinorVersion = fmt.Sprintf("%d.%d", kubernetesVersion.Major(), kubernetesVersion.Minor())
+		data                        = []string{
+			kubernetesMajorMinorVersion,
+			worker.Machine.Type,
+			worker.Machine.Image.Name + *worker.Machine.Image.Version,
+		}
+	)
 
-	data := []string{
-		kubernetesMajorMinorVersion,
-		worker.Machine.Type,
-		worker.Machine.Image.Name + *worker.Machine.Image.Version,
+	// Do not change hash for kubernetes version, machine image versions if in place update
+	if inPlaceUpdate {
+		data = []string{
+			worker.Machine.Type,
+			worker.Machine.Image.Name,
+		}
 	}
 
 	if worker.Volume != nil {
@@ -1014,7 +1075,8 @@ func KeyV2(
 		data = append(data, string(worker.CRI.Name))
 	}
 
-	if credentialsRotation != nil {
+	// Do not change hash for credentials rotation if in place update
+	if !inPlaceUpdate && credentialsRotation != nil {
 		if credentialsRotation.CertificateAuthorities != nil && credentialsRotation.CertificateAuthorities.LastInitiationTime != nil {
 			data = append(data, credentialsRotation.CertificateAuthorities.LastInitiationTime.Time.String())
 		}
@@ -1027,22 +1089,9 @@ func KeyV2(
 		data = append(data, "node-local-dns")
 	}
 
-	if kubeletConfiguration != nil {
-		if resources := v1beta1helper.SumResourceReservations(kubeletConfiguration.KubeReserved, kubeletConfiguration.SystemReserved); resources != nil {
-			data = append(data, fmt.Sprintf("%s-%s-%s-%s", resources.CPU, resources.Memory, resources.PID, resources.EphemeralStorage))
-		}
-		if eviction := kubeletConfiguration.EvictionHard; eviction != nil {
-			data = append(data, fmt.Sprintf("%s-%s-%s-%s-%s",
-				ptr.Deref(eviction.ImageFSAvailable, ""),
-				ptr.Deref(eviction.ImageFSInodesFree, ""),
-				ptr.Deref(eviction.MemoryAvailable, ""),
-				ptr.Deref(eviction.NodeFSAvailable, ""),
-				ptr.Deref(eviction.NodeFSInodesFree, ""),
-			))
-		}
-		if policy := kubeletConfiguration.CPUManagerPolicy; policy != nil {
-			data = append(data, *policy)
-		}
+	// Do not change hash for kubelet configuration if in place update
+	if !inPlaceUpdate && kubeletConfiguration != nil {
+		data = append(data, CalculateDataStringForKubeletConfiguration(kubeletConfiguration)...)
 	}
 
 	var result string
@@ -1066,4 +1115,26 @@ func keySuffix(version int, machineImageName string, purpose extensionsv1alpha1.
 		return imagePrefix + "-original"
 	}
 	return ""
+}
+
+func CalculateDataStringForKubeletConfiguration(kubeletConfiguration *gardencorev1beta1.KubeletConfig) []string {
+	data := []string{}
+
+	if resources := v1beta1helper.SumResourceReservations(kubeletConfiguration.KubeReserved, kubeletConfiguration.SystemReserved); resources != nil {
+		data = append(data, fmt.Sprintf("%s-%s-%s-%s", resources.CPU, resources.Memory, resources.PID, resources.EphemeralStorage))
+	}
+	if eviction := kubeletConfiguration.EvictionHard; eviction != nil {
+		data = append(data, fmt.Sprintf("%s-%s-%s-%s-%s",
+			ptr.Deref(eviction.ImageFSAvailable, ""),
+			ptr.Deref(eviction.ImageFSInodesFree, ""),
+			ptr.Deref(eviction.MemoryAvailable, ""),
+			ptr.Deref(eviction.NodeFSAvailable, ""),
+			ptr.Deref(eviction.NodeFSInodesFree, ""),
+		))
+	}
+	if policy := kubeletConfiguration.CPUManagerPolicy; policy != nil {
+		data = append(data, *policy)
+	}
+
+	return data
 }
