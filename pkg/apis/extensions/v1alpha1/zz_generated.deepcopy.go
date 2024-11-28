@@ -1646,6 +1646,11 @@ func (in *OperatingSystemConfigSpec) DeepCopyInto(out *OperatingSystemConfigSpec
 		*out = new(CredentialsRotation)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.KubeletConfigHash != nil {
+		in, out := &in.KubeletConfigHash, &out.KubeletConfigHash
+		*out = new(string)
+		**out = **in
+	}
 	return
 }
 

@@ -1493,6 +1493,18 @@ CredentialsRotation
 <p>CredentialsRotation is a structure containing information about the last initiation time of the CA and ServiceAccountKey rotation.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>kubeletConfigHash</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>KubeletConfigHash is the hash calculated on fields relevant for in-place update of the Kubelet configuration.</p>
+</td>
+</tr>
 </table>
 </td>
 </tr>
@@ -4092,6 +4104,18 @@ CredentialsRotation
 <td>
 <em>(Optional)</em>
 <p>CredentialsRotation is a structure containing information about the last initiation time of the CA and ServiceAccountKey rotation.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>kubeletConfigHash</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>KubeletConfigHash is the hash calculated on fields relevant for in-place update of the Kubelet configuration.</p>
 </td>
 </tr>
 </tbody>

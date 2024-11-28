@@ -275,6 +275,10 @@ spec:
                   - path
                   type: object
                 type: array
+              kubeletConfigHash:
+                description: KubeletConfigHash is the hash calculated on fields relevant
+                  for in-place update of the Kubelet configuration.
+                type: string
               kubeletVersion:
                 description: KubeletVersion is the version of the Kubelet.
                 type: string

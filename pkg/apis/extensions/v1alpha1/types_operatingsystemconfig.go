@@ -94,6 +94,9 @@ type OperatingSystemConfigSpec struct {
 	// CredentialsRotation is a structure containing information about the last initiation time of the CA and ServiceAccountKey rotation.
 	// +optional
 	CredentialsRotation *CredentialsRotation `json:"credentialsRotation,omitempty"`
+	// KubeletConfigHash is the hash calculated on fields relevant for in-place update of the Kubelet configuration.
+	// +optional
+	KubeletConfigHash *string `json:"kubeletConfigHash,omitempty"`
 }
 
 // Unit is a unit for the operating system configuration (usually, a systemd unit).
