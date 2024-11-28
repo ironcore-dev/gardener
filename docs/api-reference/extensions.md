@@ -1455,6 +1455,56 @@ This field is immutable.</p>
 <p>Files is a list of files that should get written to the host&rsquo;s file system.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>osVersion</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>OSVersion is the version of the OperatingSystem.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>kubeletVersion</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>KubeletVersion is the version of the Kubelet.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>credentialsRotation</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.CredentialsRotation">
+CredentialsRotation
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CredentialsRotation is a structure containing information about the last initiation time of the CA and ServiceAccountKey rotation.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>kubeletConfigHash</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>KubeletConfigHash is the hash calculated on fields relevant for in-place update of the Kubelet configuration.</p>
+</td>
+</tr>
 </table>
 </td>
 </tr>
@@ -2580,6 +2630,48 @@ DefaultStatus
 </tr>
 </tbody>
 </table>
+<h3 id="extensions.gardener.cloud/v1alpha1.CredentialsRotation">CredentialsRotation
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.OperatingSystemConfigSpec">OperatingSystemConfigSpec</a>)
+</p>
+<p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>caRotationLastInitiationTime</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CARotationLastInitiationTime is the time when the last CA rotation was initiated.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>serviceAccountKeyRotationLastInitiationTime</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ServiceAccountKeyRotationLastInitiationTime is the time when the last ServiceAccountKey rotation was initiated.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="extensions.gardener.cloud/v1alpha1.DNSRecordSpec">DNSRecordSpec
 </h3>
 <p>
@@ -3403,6 +3495,50 @@ string
 <p>
 <p>IPFamily is a type for specifying an IP protocol version to use in Gardener clusters.</p>
 </p>
+<h3 id="extensions.gardener.cloud/v1alpha1.InPlaceUpdateConfig">InPlaceUpdateConfig
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.OperatingSystemConfigStatus">OperatingSystemConfigStatus</a>)
+</p>
+<p>
+<p>InPlaceUpdateConfig is a structure containing configuration for in-place updates.
+TODO: Add image pull config</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>updateScriptPath</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>UpdateScriptPath is the path of the update script to be triggered in case of in-place updates.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>updateScriptArgs</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>UpdateScriptArgs is the arguments to be passed to the update script for in-place updates.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="extensions.gardener.cloud/v1alpha1.InfrastructureSpec">InfrastructureSpec
 </h3>
 <p>
@@ -3944,6 +4080,56 @@ This field is immutable.</p>
 <p>Files is a list of files that should get written to the host&rsquo;s file system.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>osVersion</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>OSVersion is the version of the OperatingSystem.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>kubeletVersion</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>KubeletVersion is the version of the Kubelet.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>credentialsRotation</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.CredentialsRotation">
+CredentialsRotation
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>CredentialsRotation is a structure containing information about the last initiation time of the CA and ServiceAccountKey rotation.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>kubeletConfigHash</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>KubeletConfigHash is the hash calculated on fields relevant for in-place update of the Kubelet configuration.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="extensions.gardener.cloud/v1alpha1.OperatingSystemConfigStatus">OperatingSystemConfigStatus
@@ -4020,6 +4206,20 @@ CloudConfig
 <em>(Optional)</em>
 <p>CloudConfig is a structure for containing the generated output for the given operating system
 config spec. It contains a reference to a secret as the result may contain confidential data.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>inPlaceUpdateConfig</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.InPlaceUpdateConfig">
+InPlaceUpdateConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>InPlaceUpdateConfig contains the configuration for in-place updates.</p>
 </td>
 </tr>
 </tbody>
@@ -4676,6 +4876,20 @@ string
 </tr>
 <tr>
 <td>
+<code>kubeletConfig</code></br>
+<em>
+<a href="./core.md#core.gardener.cloud/v1beta1.KubeletConfig">
+github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>KubeletConfig contains the kubelet configuration for the worker pool.</p>
+</td>
+</tr>
+<tr>
+<td>
 <code>nodeTemplate</code></br>
 <em>
 <a href="#extensions.gardener.cloud/v1alpha1.NodeTemplate">
@@ -4712,6 +4926,20 @@ ClusterAutoscalerOptions
 <td>
 <em>(Optional)</em>
 <p>ClusterAutoscaler contains the cluster autoscaler configurations for the worker pool.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>updateStrategy</code></br>
+<em>
+<a href="./core.md#core.gardener.cloud/v1beta1.MachineUpdateStrategy">
+github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineUpdateStrategy
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>UpdateStrategy specifies the update strategy for the worker pool.</p>
 </td>
 </tr>
 </tbody>
