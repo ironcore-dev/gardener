@@ -237,9 +237,26 @@ func deployMachineDeployments(
 			},
 		}
 
-		machineDeploymentStrategyType := machinev1alpha1.RollingUpdateMachineDeploymentStrategyType
+		machineDeploymentStrategy := machinev1alpha1.MachineDeploymentStrategy{
+			Type: machinev1alpha1.RollingUpdateMachineDeploymentStrategyType,
+			RollingUpdate: &machinev1alpha1.RollingUpdateMachineDeployment{
+				UpdateConfiguration: machinev1alpha1.UpdateConfiguration{
+					MaxUnavailable: &deployment.MaxUnavailable,
+					MaxSurge:       &deployment.MaxSurge,
+				},
+			},
+		}
+
 		if deployment.UpdateStrategy == v1beta1.InPlaceUpdate {
-			machineDeploymentStrategyType = machinev1alpha1.InPlaceUpdateMachineDeploymentStrategyType
+			machineDeploymentStrategy = machinev1alpha1.MachineDeploymentStrategy{
+				Type: machinev1alpha1.InPlaceUpdateMachineDeploymentStrategyType,
+				InPlaceUpdate: &machinev1alpha1.InPlaceUpdateMachineDeployment{
+					UpdateConfiguration: machinev1alpha1.UpdateConfiguration{
+						MaxUnavailable: &deployment.MaxUnavailable,
+						MaxSurge:       &deployment.MaxSurge,
+					},
+				},
+			}
 		}
 
 		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, cl, machineDeployment, func() error {
@@ -249,15 +266,7 @@ func deployMachineDeployments(
 			machineDeployment.Spec = machinev1alpha1.MachineDeploymentSpec{
 				Replicas:        replicas,
 				MinReadySeconds: 500,
-				Strategy: machinev1alpha1.MachineDeploymentStrategy{
-					Type: machineDeploymentStrategyType,
-					RollingUpdate: &machinev1alpha1.RollingUpdateMachineDeployment{
-						UpdateConfiguration: machinev1alpha1.UpdateConfiguration{
-							MaxUnavailable: &deployment.MaxUnavailable,
-							MaxSurge:       &deployment.MaxSurge,
-						},
-					},
-				},
+				Strategy:        machineDeploymentStrategy,
 				Selector: &metav1.LabelSelector{
 					MatchLabels: labels,
 				},
