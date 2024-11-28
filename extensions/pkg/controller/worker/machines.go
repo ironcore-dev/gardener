@@ -19,8 +19,10 @@ import (
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	"github.com/gardener/gardener/extensions/pkg/util"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/component/extensions/operatingsystemconfig"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/gardener/shootstate"
 )
@@ -43,6 +45,7 @@ type MachineDeployment struct {
 	State                        *shootstate.MachineDeploymentState
 	MachineConfiguration         *machinev1alpha1.MachineConfiguration
 	ClusterAutoscalerAnnotations map[string]string
+	UpdateStrategy               gardencorev1beta1.MachineUpdateStrategy
 }
 
 // MachineDeployments is a list of machine deployments.
@@ -95,7 +98,7 @@ func (m MachineDeployments) HasSecret(secretName string) bool {
 // WorkerPoolHash returns a hash value for a given worker pool and a given cluster resource.
 func WorkerPoolHash(pool extensionsv1alpha1.WorkerPool, cluster *extensionscontroller.Cluster, additionalDataV1 []string, additionalDataV2 []string) (string, error) {
 	if pool.NodeAgentSecretName != nil {
-		return WorkerPoolHashV2(*pool.NodeAgentSecretName, additionalDataV2...)
+		return WorkerPoolHashV2(*pool.NodeAgentSecretName, pool, cluster, additionalDataV2...)
 	}
 	return WorkerPoolHashV1(pool, cluster, additionalDataV1...)
 }
@@ -161,8 +164,41 @@ func WorkerPoolHashV1(pool extensionsv1alpha1.WorkerPool, cluster *extensionscon
 }
 
 // WorkerPoolHashV2 returns a hash value for a given nodeAgentSecretName and additional data.
-func WorkerPoolHashV2(nodeAgentSecretName string, additionalData ...string) (string, error) {
+func WorkerPoolHashV2(nodeAgentSecretName string, pool extensionsv1alpha1.WorkerPool, cluster *extensionscontroller.Cluster, additionalData ...string) (string, error) {
 	data := []string{nodeAgentSecretName}
+
+	if helper.IsInPlaceUpdate(pool.UpdateStrategy) {
+		kubernetesVersion := cluster.Shoot.Spec.Kubernetes.Version
+		if pool.KubernetesVersion != nil {
+			kubernetesVersion = *pool.KubernetesVersion
+		}
+		shootVersionMajorMinor, err := util.VersionMajorMinor(kubernetesVersion)
+		if err != nil {
+			return "", err
+		}
+
+		data = []string{
+			shootVersionMajorMinor,
+			pool.MachineImage.Version,
+		}
+
+		if status := cluster.Shoot.Status; status.Credentials != nil && status.Credentials.Rotation != nil {
+			if status.Credentials.Rotation.CertificateAuthorities != nil && status.Credentials.Rotation.CertificateAuthorities.LastInitiationTime != nil {
+				data = append(data, status.Credentials.Rotation.CertificateAuthorities.LastInitiationTime.Time.String())
+			}
+			if status.Credentials.Rotation.ServiceAccountKey != nil && status.Credentials.Rotation.ServiceAccountKey.LastInitiationTime != nil {
+				data = append(data, status.Credentials.Rotation.ServiceAccountKey.LastInitiationTime.Time.String())
+			}
+		}
+
+		kubeletConfiguration := cluster.Shoot.Spec.Kubernetes.Kubelet
+		if pool.KubeletConfig != nil {
+			kubeletConfiguration = pool.KubeletConfig
+		}
+		if kubeletConfiguration != nil {
+			data = append(data, operatingsystemconfig.CalculateDataStringForKubeletConfiguration(kubeletConfiguration)...)
+		}
+	}
 
 	data = append(data, additionalData...)
 
