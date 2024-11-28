@@ -16,6 +16,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
+	kubeletconfigv1beta1 "k8s.io/kubelet/config/v1beta1"
+	"k8s.io/utils/ptr"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
@@ -28,6 +30,7 @@ var decoder runtime.Decoder
 func init() {
 	scheme := runtime.NewScheme()
 	utilruntime.Must(extensionsv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(kubeletconfigv1beta1.AddToScheme(scheme))
 	decoder = serializer.NewCodecFactory(scheme).UniversalDeserializer()
 }
 
@@ -46,9 +49,13 @@ func extractOSCFromSecret(secret *corev1.Secret) (*extensionsv1alpha1.OperatingS
 }
 
 type operatingSystemConfigChanges struct {
-	units      units
-	files      files
-	containerd containerd
+	units         units
+	files         files
+	containerd    containerd
+	osVersion     osVersion
+	kubeletUpdate kubeletUpdate
+	caRotation    bool
+	saKeyRotation bool
 }
 
 type units struct {
@@ -71,6 +78,16 @@ type files struct {
 	deleted []extensionsv1alpha1.File
 }
 
+type osVersion struct {
+	changed bool
+	version string
+}
+
+type kubeletUpdate struct {
+	minorVersionUpdate bool
+	configUpdate       bool
+}
+
 type containerd struct {
 	// configFileChange tracks if the config file of containerd will change, so that GNA can restart the unit.
 	configFileChange bool
@@ -83,7 +100,7 @@ type containerdRegistries struct {
 	deleted []extensionsv1alpha1.RegistryConfig
 }
 
-func computeOperatingSystemConfigChanges(fs afero.Afero, newOSC *extensionsv1alpha1.OperatingSystemConfig) (*operatingSystemConfigChanges, error) {
+func computeOperatingSystemConfigChanges(fs afero.Afero, newOSC *extensionsv1alpha1.OperatingSystemConfig, currentOSVersion string) (*operatingSystemConfigChanges, error) {
 	changes := &operatingSystemConfigChanges{}
 
 	// osc.files and osc.unit.files should be changed the same way by OSC controller.
@@ -133,6 +150,35 @@ func computeOperatingSystemConfigChanges(fs afero.Afero, newOSC *extensionsv1alp
 		mergeUnits(newOSC.Spec.Units, newOSC.Status.ExtensionUnits),
 		changes.files,
 	)
+
+	if oldOSC.Spec.OSVersion != nil &&
+		newOSC.Spec.OSVersion != nil &&
+		*oldOSC.Spec.OSVersion != *newOSC.Spec.OSVersion &&
+		currentOSVersion != *newOSC.Spec.OSVersion {
+		changes.osVersion.changed = true
+		changes.osVersion.version = *newOSC.Spec.OSVersion
+	}
+
+	// TODO: replace with ptr.Equal
+	// TODO: Add logic to decide if it's minor/patch version
+	if oldOSC.Spec.KubeletVersion != nil && newOSC.Spec.KubeletVersion != nil && *oldOSC.Spec.KubeletVersion != *newOSC.Spec.KubeletVersion {
+		changes.kubeletUpdate.minorVersionUpdate = true
+	}
+
+	if newOSC.Spec.KubeletConfigHash != nil && oldOSC.Spec.KubeletConfigHash != nil && *oldOSC.Spec.KubeletConfigHash != *newOSC.Spec.KubeletConfigHash {
+		changes.kubeletUpdate.configUpdate = true
+	}
+
+	if newOSC.Spec.CredentialsRotation != nil {
+		// Rotation is triggered for the first time
+		if oldOSC.Spec.CredentialsRotation == nil {
+			changes.caRotation = newOSC.Spec.CredentialsRotation.CARotationLastInitiationTime != nil
+			changes.saKeyRotation = newOSC.Spec.CredentialsRotation.ServiceAccountKeyRotationLastInitiationTime != nil
+		} else {
+			changes.caRotation = !ptr.Equal(oldOSC.Spec.CredentialsRotation.CARotationLastInitiationTime, newOSC.Spec.CredentialsRotation.CARotationLastInitiationTime)
+			changes.saKeyRotation = !ptr.Equal(oldOSC.Spec.CredentialsRotation.ServiceAccountKeyRotationLastInitiationTime, newOSC.Spec.CredentialsRotation.ServiceAccountKeyRotationLastInitiationTime)
+		}
+	}
 
 	var (
 		newRegistries []extensionsv1alpha1.RegistryConfig
