@@ -129,6 +129,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 			return reconcile.Result{RequeueAfter: 5 * time.Second}, nil
 		}
 
+		log.Info("In-place update is in progress", "OS Update", oscChanges.osVersion.changed,
+			"Kubelet minor version update", oscChanges.kubeletUpdate.minorVersionUpdate,
+			"Kubelet config update", oscChanges.kubeletUpdate.configUpdate,
+			"CA Rotation", oscChanges.caRotation, "SA Key Rotation", oscChanges.saKeyRotation,
+		)
+
 		// If OS version has changed, we update only the OS first and then proceed to other updates.
 		// Trigger the update script provided by OSC.
 		if oscChanges.osVersion.changed {
@@ -207,37 +213,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("failed executing unit commands: %w", err)
 	}
 
-	if isInPlaceUpdate(oscChanges) {
-		if oscChanges.caRotation {
-			if err := r.rebootstrapKubelet(ctx, log, node); err != nil {
-				return reconcile.Result{}, fmt.Errorf("failed to rebootstrap kubelet: %w", err)
-			}
-		}
-
-		// TODO: can be skipped, dedicated health controller should report kubelet unhealthy
-		if oscChanges.kubeletUpdate.minorVersionUpdate {
-			httpClient := &http.Client{Timeout: 10 * time.Second}
-			request, err := http.NewRequestWithContext(ctx, http.MethodGet, healthcheck.DefaultKubeletHealthEndpoint, nil)
-			if err != nil {
-				log.Error(err, "Creating request to kubelet health endpoint failed")
-				return reconcile.Result{}, err
-			}
-
-			if err := retry.UntilTimeout(ctx, 5*time.Second, 5*time.Minute, func(_ context.Context) (done bool, err error) {
-				response, err := httpClient.Do(request)
-				if err != nil {
-					log.Error(err, "HTTP request to kubelet health endpoint failed")
-				} else if response.StatusCode == http.StatusOK {
-					return true, nil
-				}
-
-				return false, nil
-			}); err != nil {
-				return reconcile.Result{}, fmt.Errorf("failed waiting for kubelet to become healthy after update: %w", err)
-			}
-		}
-	}
-
 	// After the node is prepared, we can wait for the registries to be configured.
 	// The ones with readiness probes should also succeed here since their cache/mirror pods
 	// can now start as workload in the cluster.
@@ -258,39 +233,56 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		"deletedUnits", len(oscChanges.units.deleted),
 	)
 
-	if isInPlaceUpdate(oscChanges) {
-		// List all pods running on the node and delete them.
-		log.Info("Deleting pods running on the node", "node", node.Name)
-		podList := &corev1.PodList{}
-		if err := r.Client.List(ctx, podList, client.MatchingFields{indexer.PodNodeName: node.Name}); err != nil {
-			return reconcile.Result{}, fmt.Errorf("failed listing pods for node %s: %w", node.Name, err)
-		}
-
-		if err := kubernetesutils.DeleteObjectsFromListConditionally(ctx, r.Client, podList, func(obj runtime.Object) bool {
-			pod, ok := obj.(*corev1.Pod)
-			if !ok {
-				return false
+	// Node can be nil during the first reconciliation loop.
+	if node != nil {
+		_, osUpdateAnnotationPresent := node.Annotations[annotationUpdateOSVersion]
+		if isInPlaceUpdate(oscChanges) || osUpdateAnnotationPresent {
+			if oscChanges.caRotation {
+				if err := r.rebootstrapKubelet(ctx, log, node); err != nil {
+					return reconcile.Result{}, fmt.Errorf("failed to rebootstrap kubelet: %w", err)
+				}
 			}
-			return pod.Spec.NodeName == node.Name
-		}); err != nil {
-			return reconcile.Result{}, fmt.Errorf("failed deleting pods for node %s: %w", node.Name, err)
-		}
 
-		// If OS version doesn't match, return error
-		if _, ok := node.Annotations[annotationUpdateOSVersion]; ok {
-			if osVersion != ptr.Deref(osc.Spec.OSVersion, "") {
-				log.Info("OS version mismatch, not labeling node with MCM label", "node", node.Name, "version", osVersion, "expectedVersion", ptr.Deref(osc.Spec.OSVersion, ""))
-				return reconcile.Result{}, fmt.Errorf("OS update has failed for node %s", node.Name)
+			// TODO: can be skipped, dedicated health controller should report kubelet unhealthy
+			if err := r.waitForKubeletHealth(ctx, log); err != nil {
+				return reconcile.Result{}, fmt.Errorf("failed waiting for kubelet to become healthy after in-place update: %w", err)
 			}
-		}
 
-		// If this point is reached, which means all the in-place updates are done, we can label the node with MCM label.
-		// And this has to be done before persisting the current OSC to the disk.
-		log.Info("Labeling node with MCM label", "node", node.Name, "label", machinev1alpha1.LabelKeyMachineUpdateSuccessful)
-		patch := client.MergeFrom(node.DeepCopy())
-		metav1.SetMetaDataLabel(&node.ObjectMeta, machinev1alpha1.LabelKeyMachineUpdateSuccessful, "true")
-		if err := r.Client.Patch(ctx, node, patch); err != nil {
-			return reconcile.Result{}, fmt.Errorf("failed patching node with MCM label: %w", err)
+			// List all pods running on the node and delete them.
+			// This should recreate daemonset pods and pods with local storage.
+			log.Info("Deleting pods running on the node", "node", node.Name)
+			podList := &corev1.PodList{}
+			if err := r.Client.List(ctx, podList, client.MatchingFields{indexer.PodNodeName: node.Name}); err != nil {
+				return reconcile.Result{}, fmt.Errorf("failed listing pods for node %s: %w", node.Name, err)
+			}
+
+			if err := kubernetesutils.DeleteObjectsFromListConditionally(ctx, r.Client, podList, func(obj runtime.Object) bool {
+				pod, ok := obj.(*corev1.Pod)
+				if !ok {
+					return false
+				}
+				return pod.Spec.NodeName == node.Name
+			}); err != nil {
+				return reconcile.Result{}, fmt.Errorf("failed deleting pods for node %s: %w", node.Name, err)
+			}
+
+			// If OS version doesn't match, return error
+			if osUpdateAnnotationPresent {
+				if osVersion != ptr.Deref(osc.Spec.OSVersion, "") {
+					log.Info("OS version mismatch, not labeling node with MCM label", "node", node.Name, "version", osVersion, "expectedVersion", ptr.Deref(osc.Spec.OSVersion, ""))
+					return reconcile.Result{}, fmt.Errorf("OS update has failed for node %s", node.Name)
+				}
+			}
+
+			// If this point is reached, which means all the in-place updates are done, we can label the node with MCM label.
+			// And this has to be done before persisting the current OSC to the disk.
+			log.Info("Labeling node with MCM label", "node", node.Name, "label", machinev1alpha1.LabelKeyMachineUpdateSuccessful)
+			patch := client.MergeFrom(node.DeepCopy())
+			metav1.SetMetaDataLabel(&node.ObjectMeta, machinev1alpha1.LabelKeyMachineUpdateSuccessful, "true")
+			delete(node.Annotations, annotationUpdateOSVersion)
+			if err := r.Client.Patch(ctx, node, patch); err != nil {
+				return reconcile.Result{}, fmt.Errorf("failed patching node after in-place update: %w", err)
+			}
 		}
 	}
 
@@ -595,7 +587,7 @@ func (r *Reconciler) executeUnitCommands(ctx context.Context, log logr.Logger, n
 }
 
 func (r *Reconciler) rebootstrapKubelet(ctx context.Context, log logr.Logger, node *corev1.Node) error {
-	log.Info("Rebootstrapping kubelet after CA rotation", "node", node.Name)
+	log.Info("Rebootstrapping kubelet after CA rotation")
 
 	kubeletClientCertificatePath := filepath.Join(kubelet.PathKubeletDirectory, "pki", "kubelet-client-current.pem")
 	kubeletClientCertificate, err := r.FS.ReadFile(kubeletClientCertificatePath)
@@ -669,6 +661,31 @@ func getOSVersion() (string, error) {
 	} else {
 		return version, nil
 	}
+}
+
+func (r *Reconciler) waitForKubeletHealth(ctx context.Context, log logr.Logger) error {
+	httpClient := &http.Client{Timeout: 10 * time.Second}
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, healthcheck.DefaultKubeletHealthEndpoint, nil)
+	if err != nil {
+		log.Error(err, "Creating request to kubelet health endpoint failed")
+		return err
+	}
+
+	if err := retry.UntilTimeout(ctx, 5*time.Second, 5*time.Minute, func(_ context.Context) (done bool, err error) {
+		response, err := httpClient.Do(request)
+		if err != nil {
+			log.Error(err, "HTTP request to kubelet health endpoint failed")
+		} else if response.StatusCode == http.StatusOK {
+			log.Info("Kubelet is healthy after in-place update")
+			return true, nil
+		}
+
+		return false, nil
+	}); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func isInPlaceUpdate(changes *operatingSystemConfigChanges) bool {

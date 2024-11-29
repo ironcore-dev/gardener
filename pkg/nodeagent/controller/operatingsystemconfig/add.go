@@ -53,6 +53,7 @@ func (r *Reconciler) AddToManager(ctx context.Context, mgr manager.Manager) erro
 		r.Extractor = registry.NewExtractor()
 	}
 
+	// TODO: Add a watch for the node and map it to the secret
 	return builder.
 		ControllerManagedBy(mgr).
 		Named(ControllerName).
