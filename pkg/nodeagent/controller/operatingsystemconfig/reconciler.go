@@ -56,6 +56,7 @@ import (
 const (
 	lastAppliedOperatingSystemConfigFilePath = nodeagentv1alpha1.BaseDir + "/last-applied-osc.yaml"
 	annotationUpdateOSVersion                = "worker.gardener.cloud/updating-os-version"
+	annotationRestartNodeAgent               = "worker.gardener.cloud/restarted-node-agent"
 	kubeletUnitName                          = "kubelet.service"
 )
 
@@ -238,6 +239,19 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	if node != nil {
 		_, osUpdateAnnotationPresent := node.Annotations[annotationUpdateOSVersion]
 		if isInPlaceUpdate(oscChanges) || osUpdateAnnotationPresent {
+			_, restartNodeAgentAnnotationPresent := node.Annotations[annotationRestartNodeAgent]
+			if (oscChanges.caRotation || oscChanges.saKeyRotation) && !restartNodeAgentAnnotationPresent {
+				patch := client.MergeFrom(node.DeepCopy())
+				metav1.SetMetaDataAnnotation(&node.ObjectMeta, annotationRestartNodeAgent, "true")
+				if err := r.Client.Patch(ctx, node, patch); err != nil {
+					return reconcile.Result{}, fmt.Errorf("failed patching node with annotation %s: %w", annotationRestartNodeAgent, err)
+				}
+
+				log.Info("Restarting gardener-node-agent unit to pick up the new CA bundle or/and service account key, canceling the context to initiate graceful shutdown")
+				r.CancelContext()
+				return reconcile.Result{}, nil
+			}
+
 			if oscChanges.caRotation {
 				if err := r.rebootstrapKubelet(ctx, log, node); err != nil {
 					return reconcile.Result{}, fmt.Errorf("failed to rebootstrap kubelet: %w", err)
@@ -281,6 +295,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 			patch := client.MergeFrom(node.DeepCopy())
 			metav1.SetMetaDataLabel(&node.ObjectMeta, machinev1alpha1.LabelKeyMachineUpdateSuccessful, "true")
 			delete(node.Annotations, annotationUpdateOSVersion)
+			delete(node.Annotations, annotationRestartNodeAgent)
 			if err := r.Client.Patch(ctx, node, patch); err != nil {
 				return reconcile.Result{}, fmt.Errorf("failed patching node after in-place update: %w", err)
 			}
