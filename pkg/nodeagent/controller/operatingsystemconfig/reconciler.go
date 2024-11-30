@@ -56,6 +56,7 @@ import (
 const (
 	lastAppliedOperatingSystemConfigFilePath = nodeagentv1alpha1.BaseDir + "/last-applied-osc.yaml"
 	annotationUpdateOSVersion                = "worker.gardener.cloud/updating-os-version"
+	annotationRestartNodeAgent               = "worker.gardener.cloud/restarted-node-agent"
 	kubeletUnitName                          = "kubelet.service"
 )
 
@@ -248,6 +249,19 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 				return reconcile.Result{}, fmt.Errorf("failed waiting for kubelet to become healthy after in-place update: %w", err)
 			}
 
+			_, restartNodeAgentAnnotationPresent := node.Annotations[annotationRestartNodeAgent]
+			if oscChanges.saKeyRotation && !restartNodeAgentAnnotationPresent {
+				patch := client.MergeFrom(node.DeepCopy())
+				metav1.SetMetaDataAnnotation(&node.ObjectMeta, annotationRestartNodeAgent, "true")
+				if err := r.Client.Patch(ctx, node, patch); err != nil {
+					return reconcile.Result{}, fmt.Errorf("failed patching node with annotation %s: %w", annotationRestartNodeAgent, err)
+				}
+
+				log.Info("Restarting gardener-node-agent unit to pick up new service account key, canceling the context to initiate graceful shutdown")
+				r.CancelContext()
+				return reconcile.Result{}, nil
+			}
+
 			// List all pods running on the node and delete them.
 			// This should recreate daemonset pods and pods with local storage.
 			log.Info("Deleting pods running on the node", "node", node.Name)
@@ -280,6 +294,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 			patch := client.MergeFrom(node.DeepCopy())
 			metav1.SetMetaDataLabel(&node.ObjectMeta, machinev1alpha1.LabelKeyMachineUpdateSuccessful, "true")
 			delete(node.Annotations, annotationUpdateOSVersion)
+			delete(node.Annotations, annotationRestartNodeAgent)
 			if err := r.Client.Patch(ctx, node, patch); err != nil {
 				return reconcile.Result{}, fmt.Errorf("failed patching node after in-place update: %w", err)
 			}
