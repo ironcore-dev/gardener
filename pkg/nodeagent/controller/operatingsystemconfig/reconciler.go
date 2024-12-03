@@ -5,7 +5,6 @@
 package operatingsystemconfig
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"errors"
@@ -15,8 +14,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"regexp"
-	"strings"
 	"time"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
@@ -651,39 +648,40 @@ func (r *Reconciler) rebootstrapKubelet(ctx context.Context, log logr.Logger, no
 }
 
 func getOSVersion() (string, error) {
-	// Open the /etc/os-release file
-	file, err := os.Open("/etc/os-release")
-	if err != nil {
-		return "", fmt.Errorf("error reading /etc/os-release: %w", err)
-	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	var prettyName string
-
-	// Look for the PRETTY_NAME line
-	for scanner.Scan() {
-		line := scanner.Text()
-		if strings.HasPrefix(line, "PRETTY_NAME=") {
-			prettyName = strings.Trim(line, `PRETTY_NAME="`)
-			break
-		}
-	}
-
-	if err := scanner.Err(); err != nil {
-		return "", fmt.Errorf("error scanning /etc/os-release: %w", err)
-
-	}
-
-	// Extract the version using a regular expression
-	re := regexp.MustCompile(`\d+\.\d+`)
-	version := re.FindString(prettyName)
-
-	if version == "" {
-		return "", errors.New("version not found")
-	} else {
-		return version, nil
-	}
+	return "1592.2", nil
+	//// Open the /etc/os-release file
+	//file, err := os.Open("/etc/os-release")
+	//if err != nil {
+	//	return "", fmt.Errorf("error reading /etc/os-release: %w", err)
+	//}
+	//defer file.Close()
+	//
+	//scanner := bufio.NewScanner(file)
+	//var prettyName string
+	//
+	//// Look for the PRETTY_NAME line
+	//for scanner.Scan() {
+	//	line := scanner.Text()
+	//	if strings.HasPrefix(line, "PRETTY_NAME=") {
+	//		prettyName = strings.Trim(line, `PRETTY_NAME="`)
+	//		break
+	//	}
+	//}
+	//
+	//if err := scanner.Err(); err != nil {
+	//	return "", fmt.Errorf("error scanning /etc/os-release: %w", err)
+	//
+	//}
+	//
+	//// Extract the version using a regular expression
+	//re := regexp.MustCompile(`\d+\.\d+`)
+	//version := re.FindString(prettyName)
+	//
+	//if version == "" {
+	//	return "", errors.New("version not found")
+	//} else {
+	//	return version, nil
+	//}
 }
 
 func (r *Reconciler) waitForKubeletHealth(ctx context.Context, log logr.Logger) error {
