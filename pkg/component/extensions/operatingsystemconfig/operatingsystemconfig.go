@@ -1047,8 +1047,7 @@ func KeyV2(
 	}
 
 	var (
-		// inPlaceUpdate               = v1beta1helper.IsInPlaceUpdate(worker.UpdateStrategy)
-		inPlaceUpdate               = true
+		inPlaceUpdate               = v1beta1helper.IsInPlaceUpdate(worker.UpdateStrategy)
 		kubernetesMajorMinorVersion = fmt.Sprintf("%d.%d", kubernetesVersion.Major(), kubernetesVersion.Minor())
 		data                        = []string{
 			kubernetesMajorMinorVersion,
@@ -1056,6 +1055,11 @@ func KeyV2(
 			worker.Machine.Image.Name + *worker.Machine.Image.Version,
 		}
 	)
+
+	// in case of inplace update ignore k8s versions changes
+	if inPlaceUpdate {
+		data = data[1:]
+	}
 
 	// Do not change hash for kubernetes version, machine image versions if in place update
 	if inPlaceUpdate {
