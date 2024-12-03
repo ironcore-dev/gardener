@@ -28,6 +28,12 @@ jobs:
             target: apiserver
           - name: gardener-node-agent
             target: node-agent
+          - name: gardener-scheduler
+            target: scheduler
+          - name: gardener-controller-manager
+            target: controller-manager
+          - name: gardenlet
+            target: gardenlet
     permissions:
       contents: read
       packages: write
